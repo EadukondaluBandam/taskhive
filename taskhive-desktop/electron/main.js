@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const preloadPath = path.join(__dirname, 'preload.js')
 const API_BASE_URL = process.env.TASKHIVE_API_URL || 'http://localhost:4000/api/v1'
+const BUILD_ROLE = String(process.env.ROLE || '').trim().toLowerCase()
 
 function resolveFaviconPath() {
   const candidates = [
@@ -234,11 +235,15 @@ function createWindow() {
     }
   })
 
-  mainWindow.loadURL('http://localhost:8080')
+  const startRoute = '#/login'
+  const devUrl = process.env.ELECTRON_RENDERER_URL || 'http://localhost:8080'
+  if (app.isPackaged) {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'), { hash: '/login' })
+  } else {
+    mainWindow.loadURL(`${devUrl}${startRoute}`)
+  }
   mainWindow.once('ready-to-show', () => {
-    // Start minimized so users see a taskbar icon without the large window.
     mainWindow.show()
-    mainWindow.minimize()
   })
 
   mainWindow.on('close', (event) => {
@@ -673,6 +678,13 @@ ipcMain.handle('taskhive:toggle-timer', () => {
 
   updateWidgetStatus()
   return { success: true }
+})
+
+ipcMain.handle('taskhive:get-role', () => {
+  if (BUILD_ROLE === 'admin' || BUILD_ROLE === 'employee') {
+    return BUILD_ROLE
+  }
+  return null
 })
 
 app.on('window-all-closed', () => {

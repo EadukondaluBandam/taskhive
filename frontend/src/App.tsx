@@ -10,6 +10,7 @@ import { TimerProvider } from "@/contexts/TimerContext";
 // Pages
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import Download from "./pages/Download";
 
 // Admin Pages
 import AdminLayout from "./layouts/AdminLayout";
@@ -78,6 +79,8 @@ function AppRoutes() {
           )
         }
       />
+
+      <Route path="/download" element={<Download />} />
 
       {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />

@@ -7,9 +7,11 @@
   "scripts": {
     "dev": "vite",
     "electron": "electron .",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dist:admin": "cross-env ROLE=Admin electron-builder --win",
+    "dist:employee": "cross-env ROLE=Employee electron-builder --win"
   },
   "dependencies": {
     "active-win": "^8.2.1",
@@ -25,6 +27,8 @@
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
+    "cross-env": "^7.0.3",
+    "electron-builder": "^25.1.8",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -32,6 +36,18 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4"
+  },
+  "build": {
+    "appId": "com.taskhive.desktop",
+    "productName": "TaskHive",
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "${productName}-${env.ROLE}.exe"
+    }
   }
 }
 

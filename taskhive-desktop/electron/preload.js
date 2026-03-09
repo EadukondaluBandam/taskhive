@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('TaskHiveDesktop', {
   iconClick: () => ipcRenderer.invoke('taskhive:icon-click'),
   dragWidget: (payload) => ipcRenderer.invoke('taskhive:drag-widget', payload),
   openMain: () => ipcRenderer.invoke('taskhive:open-main'),
+  getDesktopRole: () => ipcRenderer.invoke('taskhive:get-role'),
   login: (payload) => ipcRenderer.invoke('taskhive:login', payload),
   logout: () => ipcRenderer.invoke('taskhive:logout'),
   toggleTimer: () => ipcRenderer.invoke('taskhive:toggle-timer'),
