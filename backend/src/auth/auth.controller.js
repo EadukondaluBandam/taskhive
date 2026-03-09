@@ -86,6 +86,15 @@ const resetPassword = async (req, res) => {
   });
 };
 
+const setPassword = async (req, res) => {
+  await authService.setPassword(req.validated.body);
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "Password set successfully",
+    data: {}
+  });
+};
+
 const refresh = async (req, res) => {
   const refreshToken = req.validated.body.refreshToken || req.cookies[REFRESH_COOKIE];
   const result = await authService.refresh({ refreshToken });
@@ -120,6 +129,7 @@ module.exports = {
   login,
   forgotPassword,
   resetPassword,
+  setPassword,
   refresh,
   logout
 };

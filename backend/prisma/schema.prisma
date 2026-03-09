@@ -14,6 +14,7 @@ enum Role {
 }
 
 enum UserStatus {
+  pending
   active
   invited
   suspended
@@ -78,9 +79,11 @@ model User {
   id                       String                @id @default(uuid()) @db.Uuid
   name                     String                @db.VarChar(120)
   email                    String                @unique @db.VarChar(255)
-  passwordHash             String                @map("password_hash") @db.VarChar(255)
+  password                 String?               @map("password_hash") @db.VarChar(255)
   role                     Role                  @default(employee)
   status                   UserStatus            @default(active)
+  inviteToken              String?               @unique @map("invite_token") @db.VarChar(255)
+  inviteTokenExpiry        DateTime?             @map("invite_token_expiry") @db.Timestamptz(6)
   organizationId           String?               @map("organization_id") @db.Uuid
   organization             Organization?         @relation("OrganizationPrimaryUsers", fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
   assignedTasks            Task[]                @relation("TaskAssignedTo")

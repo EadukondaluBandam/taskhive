@@ -32,7 +32,7 @@ async function seedSuperAdmin(): Promise<void> {
     data: {
       name: "Super Admin",
       email: email.toLowerCase(),
-      passwordHash,
+      password: passwordHash,
       role: Role.super_admin
     }
   });
@@ -48,3 +48,4 @@ seedSuperAdmin()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

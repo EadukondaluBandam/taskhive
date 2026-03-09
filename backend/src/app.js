@@ -38,6 +38,7 @@ app.get("/test-email", async (req, res) => {
 
 // Backward-compatible auth routes without version prefix.
 app.use("/auth", authRoutes);
+app.use("/api", apiRoutes);
 app.use("/api/v1", apiRoutes);
 app.use(notFound);
 app.use(errorHandler);

@@ -63,7 +63,7 @@ const register = async ({ name, email, password, role, organizationId }, actor) 
     data: {
       name,
       email,
-      passwordHash,
+      password: passwordHash,
       role: role || ROLES.EMPLOYEE,
       organizationId: organizationId || null
     }
@@ -101,7 +101,7 @@ const registerCompany = async ({ companyName, adminName, email, password }) => {
       data: {
         name: adminName,
         email,
-        passwordHash,
+        password: passwordHash,
         role: ROLES.ADMIN,
         organizationId: organization.id
       }
@@ -138,7 +138,16 @@ const login = async ({ email, password }) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
   }
 
-  const matched = await bcrypt.compare(password, user.passwordHash);
+  if (!user.password) {
+    logger.warn("Login failed: account has no password set", { email, userId: user.id });
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Account setup is incomplete. Please set your password using the invite email.");
+  }
+  if (user.status === "pending") {
+    logger.warn("Login failed: pending account", { email, userId: user.id });
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Account is pending activation. Please complete password setup.");
+  }
+
+  const matched = await bcrypt.compare(password, user.password);
   if (!matched) {
     logger.warn("Login failed: invalid password", { email });
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
@@ -267,7 +276,7 @@ const resetPassword = async ({ token, password }) => {
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: resetRecord.userId },
-      data: { passwordHash }
+      data: { password: passwordHash }
     });
 
     await tx.passwordReset.update({
@@ -280,12 +289,42 @@ const resetPassword = async ({ token, password }) => {
   return { success: true };
 };
 
+const setPassword = async ({ token, password }) => {
+  const now = new Date();
+
+  const user = await prisma.user.findFirst({
+    where: {
+      inviteToken: token
+    }
+  });
+
+  if (!user || !user.inviteTokenExpiry || user.inviteTokenExpiry <= now) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Invalid or expired invite token");
+  }
+
+  const passwordHash = await bcrypt.hash(password, 12);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: passwordHash,
+      status: "active",
+      inviteToken: null,
+      inviteTokenExpiry: null
+    }
+  });
+
+  logger.info("Invite password set successfully", { userId: user.id, email: user.email });
+  return { success: true };
+};
+
 module.exports = {
   register,
   registerCompany,
   login,
   forgotPassword,
   resetPassword,
+  setPassword,
   refresh,
   logout
 };

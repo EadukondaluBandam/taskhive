@@ -53,6 +53,15 @@ const resetPasswordSchema = z.object({
   query: z.object({}).optional()
 });
 
+const setPasswordSchema = z.object({
+  body: z.object({
+    token: z.string().min(20),
+    password: z.string().min(8).max(128)
+  }),
+  params: z.object({}).optional(),
+  query: z.object({}).optional()
+});
+
 const refreshSchema = z.object({
   body: z.object({
     refreshToken: z.string().min(1).optional()
@@ -75,6 +84,7 @@ module.exports = {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  setPasswordSchema,
   refreshSchema,
   logoutSchema
 };

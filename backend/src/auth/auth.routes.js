@@ -11,6 +11,7 @@ const {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  setPasswordSchema,
   refreshSchema,
   logoutSchema
 } = require("./auth.schema");
@@ -22,6 +23,7 @@ router.post("/register-company", authRateLimiter, validate(registerCompanySchema
 router.post("/login", authRateLimiter, validate(loginSchema), asyncHandler(controller.login));
 router.post("/forgot-password", authRateLimiter, validate(forgotPasswordSchema), asyncHandler(controller.forgotPassword));
 router.post("/reset-password", authRateLimiter, validate(resetPasswordSchema), asyncHandler(controller.resetPassword));
+router.post("/set-password", authRateLimiter, validate(setPasswordSchema), asyncHandler(controller.setPassword));
 router.post("/refresh", authRateLimiter, validate(refreshSchema), asyncHandler(controller.refresh));
 router.post("/logout", validate(logoutSchema), asyncHandler(controller.logout));
 

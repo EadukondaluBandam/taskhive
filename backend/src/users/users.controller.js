@@ -13,7 +13,17 @@ const getMe = async (req, res) => {
   res.status(StatusCodes.OK).json({ success: true, data: user });
 };
 
+const createUser = async (req, res) => {
+  const user = await service.createUser(req.validated.body, req.user);
+  res.status(StatusCodes.CREATED).json({
+    success: true,
+    message: "User invited successfully",
+    data: user
+  });
+};
+
 module.exports = {
   listUsers,
-  getMe
+  getMe,
+  createUser
 };

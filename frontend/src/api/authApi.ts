@@ -33,6 +33,11 @@ export interface RegisterCompanyInput {
   password: string;
 }
 
+export interface SetPasswordInput {
+  token: string;
+  password: string;
+}
+
 const applyAuthPayload = (payload: AuthPayload) => {
   setAccessToken(payload.accessToken);
   return payload;
@@ -62,6 +67,10 @@ export const authApi = {
   async logout() {
     await apiClient.post<ApiResponse<Record<string, never>>>("/auth/logout", {});
     setAccessToken(null);
+  },
+
+  async setPassword(input: SetPasswordInput) {
+    await apiClient.post<ApiResponse<Record<string, never>>>("/auth/set-password", input);
   },
 
   async getCurrentUser() {

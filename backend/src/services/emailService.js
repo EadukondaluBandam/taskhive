@@ -1,12 +1,23 @@
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 const logger = require("../utils/logger");
+const { buildInviteEmailHtml } = require("../mail/inviteTemplate");
 
-const getResendClient = () => {
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    throw new Error("RESEND_API_KEY is not configured");
+const getTransporter = () => {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    throw new Error("SMTP_HOST, SMTP_USER and SMTP_PASS must be configured");
   }
-  return new Resend(apiKey);
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass }
+  });
 };
 
 const sendEmail = async (to, subject, html) => {
@@ -16,12 +27,13 @@ const sendEmail = async (to, subject, html) => {
       throw new Error("EMAIL_FROM is not configured");
     }
 
-    const resend = getResendClient();
-    const result = await resend.emails.send({
+    const transporter = getTransporter();
+    const result = await transporter.sendMail({
       from,
       to: Array.isArray(to) ? to : [to],
       subject,
-      html
+      html,
+      text: html.replace(/<[^>]+>/g, " ")
     });
 
     return result;
@@ -34,6 +46,11 @@ const sendEmail = async (to, subject, html) => {
   }
 };
 
+const sendInviteEmail = async ({ to, inviteLink }) => {
+  return sendEmail(to, "Welcome to TaskHive", buildInviteEmailHtml({ inviteLink }));
+};
+
 module.exports = {
-  sendEmail
+  sendEmail,
+  sendInviteEmail
 };
