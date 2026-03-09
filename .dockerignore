@@ -1,0 +1,8 @@
+node_modules
+dist
+.git
+.github
+*.log
+backend/node_modules
+backend/dev-*.log
+backend/node-*.log

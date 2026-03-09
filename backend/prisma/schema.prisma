@@ -1,0 +1,430 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  super_admin
+  admin
+  employee
+}
+
+enum UserStatus {
+  active
+  invited
+  suspended
+  archived
+}
+
+enum OrganizationStatus {
+  active
+  suspended
+  archived
+}
+
+enum MembershipRole {
+  owner
+  admin
+  manager
+  member
+}
+
+enum MembershipStatus {
+  active
+  invited
+  removed
+}
+
+enum ProjectStatus {
+  active
+  on_hold
+  completed
+  archived
+}
+
+enum TaskStatus {
+  todo
+  in_progress
+  done
+  blocked
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  expired
+  revoked
+}
+
+enum NotificationType {
+  info
+  warning
+  success
+  system
+}
+
+model User {
+  id                       String                @id @default(uuid()) @db.Uuid
+  name                     String                @db.VarChar(120)
+  email                    String                @unique @db.VarChar(255)
+  passwordHash             String                @map("password_hash") @db.VarChar(255)
+  role                     Role                  @default(employee)
+  status                   UserStatus            @default(active)
+  organizationId           String?               @map("organization_id") @db.Uuid
+  organization             Organization?         @relation("OrganizationPrimaryUsers", fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  assignedTasks            Task[]                @relation("TaskAssignedTo")
+  createdProjects          Project[]             @relation("ProjectCreatedBy")
+  timeEntries              TimeEntry[]
+  activities               Activity[]
+  notifications            Notification[]
+  organizationMemberships  OrganizationMember[]
+  projectMemberships       ProjectMember[]
+  taskComments             TaskComment[]
+  attachments              Attachment[]
+  sentInvitations          Invitation[]          @relation("InvitationInvitedBy")
+  passwordResets           PasswordReset[]
+  auditLogs                AuditLog[]            @relation("AuditLogActor")
+  invitedOrganizationUsers OrganizationMember[]  @relation("OrganizationMemberInvitedBy")
+  lastLoginAt              DateTime?             @map("last_login_at") @db.Timestamptz(6)
+  deletedAt                DateTime?             @map("deleted_at") @db.Timestamptz(6)
+  createdAt                DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime              @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([role])
+  @@index([status])
+  @@index([organizationId, role])
+  @@index([organizationId, status, createdAt])
+  @@index([createdAt])
+  @@map("users")
+}
+
+model Organization {
+  id                String               @id @default(uuid()) @db.Uuid
+  name              String               @unique @db.VarChar(160)
+  slug              String?              @unique @db.VarChar(180)
+  status            OrganizationStatus   @default(active)
+  users             User[]               @relation("OrganizationPrimaryUsers")
+  members           OrganizationMember[]
+  projectMembers    ProjectMember[]
+  taskComments      TaskComment[]
+  projects          Project[]
+  tasks             Task[]
+  timeEntries       TimeEntry[]
+  activities        Activity[]
+  notifications     Notification[]
+  invitations       Invitation[]
+  settings          OrganizationSetting?
+  auditLogs         AuditLog[]
+  attachments       Attachment[]
+  createdAt         DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("organizations")
+}
+
+model Project {
+  id             String          @id @default(uuid()) @db.Uuid
+  name           String          @db.VarChar(180)
+  description    String?         @db.Text
+  status         ProjectStatus   @default(active)
+  organizationId String          @map("organization_id") @db.Uuid
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdById    String          @map("created_by") @db.Uuid
+  createdBy      User            @relation("ProjectCreatedBy", fields: [createdById], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  tasks          Task[]
+  members        ProjectMember[]
+  attachments    Attachment[]
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([createdById])
+  @@index([status])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status, createdAt])
+  @@unique([organizationId, name])
+  @@map("projects")
+}
+
+model Task {
+  id             String        @id @default(uuid()) @db.Uuid
+  name           String        @db.VarChar(180)
+  description    String?       @db.Text
+  projectId      String        @map("project_id") @db.Uuid
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  organizationId String?       @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  assignedToId   String?       @map("assigned_to") @db.Uuid
+  assignedTo     User?         @relation("TaskAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  status         TaskStatus    @default(todo)
+  priority       TaskPriority  @default(medium)
+  dueAt          DateTime?     @map("due_at") @db.Timestamptz(6)
+  timeEntries    TimeEntry[]
+  comments       TaskComment[]
+  attachments    Attachment[]
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([projectId])
+  @@index([organizationId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+  @@index([projectId, status])
+  @@index([organizationId, status, createdAt])
+  @@map("tasks")
+}
+
+model TimeEntry {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  userId         String        @map("user_id") @db.Uuid
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  taskId         String        @map("task_id") @db.Uuid
+  task           Task          @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  startTime      DateTime      @map("start_time") @db.Timestamptz(6)
+  endTime        DateTime?     @map("end_time") @db.Timestamptz(6)
+  duration       Int           @default(0)
+  notes          String?       @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([taskId])
+  @@index([createdAt])
+  @@index([startTime])
+  @@index([userId, startTime])
+  @@index([taskId, startTime])
+  @@index([organizationId, userId, createdAt])
+  @@index([organizationId, taskId, createdAt])
+  @@map("time_entries")
+}
+
+model Activity {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String?       @map("organization_id") @db.Uuid
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  userId         String        @map("user_id") @db.Uuid
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  type           String        @db.VarChar(80)
+  description    String        @db.Text
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, userId, createdAt])
+  @@map("activities")
+}
+
+model Notification {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String?          @map("organization_id") @db.Uuid
+  organization   Organization?    @relation(fields: [organizationId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  userId         String           @map("user_id") @db.Uuid
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  type           NotificationType @default(info)
+  title          String           @db.VarChar(200)
+  message        String           @db.Text
+  read           Boolean          @default(false)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([read])
+  @@index([createdAt])
+  @@index([userId, read, createdAt])
+  @@index([organizationId, read, createdAt])
+  @@map("notifications")
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId         String           @map("user_id") @db.Uuid
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role           MembershipRole   @default(member)
+  status         MembershipStatus @default(active)
+  invitedById    String?          @map("invited_by") @db.Uuid
+  invitedBy      User?            @relation("OrganizationMemberInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  joinedAt       DateTime?        @map("joined_at") @db.Timestamptz(6)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([organizationId, role, status])
+  @@map("organization_members")
+}
+
+model ProjectMember {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  projectId      String    @map("project_id") @db.Uuid
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId         String    @map("user_id") @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  role           MembershipRole @default(member)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([projectId, userId])
+  @@index([organizationId])
+  @@index([projectId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([organizationId, projectId, createdAt])
+  @@map("project_members")
+}
+
+model TaskComment {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  taskId         String        @map("task_id") @db.Uuid
+  task           Task          @relation(fields: [taskId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId         String        @map("user_id") @db.Uuid
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  content        String        @db.Text
+  editedAt       DateTime?     @map("edited_at") @db.Timestamptz(6)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([taskId])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([organizationId, taskId, createdAt])
+  @@map("task_comments")
+}
+
+model Attachment {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId         String        @map("user_id") @db.Uuid
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  projectId      String?       @map("project_id") @db.Uuid
+  project        Project?      @relation(fields: [projectId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  taskId         String?       @map("task_id") @db.Uuid
+  task           Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  fileName       String        @map("file_name") @db.VarChar(255)
+  mimeType       String        @map("mime_type") @db.VarChar(160)
+  sizeBytes      BigInt        @map("size_bytes")
+  storageUrl     String        @map("storage_url") @db.Text
+  provider       String        @default("s3") @db.VarChar(40)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([projectId])
+  @@index([taskId])
+  @@index([createdAt])
+  @@index([organizationId, createdAt])
+  @@map("attachments")
+}
+
+model Invitation {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  email          String           @db.VarChar(255)
+  role           MembershipRole   @default(member)
+  status         InvitationStatus @default(pending)
+  tokenHash      String           @unique @map("token_hash") @db.VarChar(255)
+  invitedById    String?          @map("invited_by") @db.Uuid
+  invitedBy      User?            @relation("InvitationInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  expiresAt      DateTime         @map("expires_at") @db.Timestamptz(6)
+  acceptedAt     DateTime?        @map("accepted_at") @db.Timestamptz(6)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([organizationId, email, status])
+  @@index([organizationId])
+  @@index([createdAt])
+  @@index([status, expiresAt])
+  @@map("invitations")
+}
+
+model PasswordReset {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tokenHash  String   @unique @map("token_hash") @db.VarChar(255)
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz(6)
+  usedAt     DateTime? @map("used_at") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([expiresAt])
+  @@index([userId, expiresAt])
+  @@map("password_resets")
+}
+
+model AuditLog {
+  id             String        @id @default(uuid()) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  actorUserId    String?       @map("actor_user_id") @db.Uuid
+  actorUser      User?         @relation("AuditLogActor", fields: [actorUserId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  action         String        @db.VarChar(120)
+  entityType     String        @map("entity_type") @db.VarChar(80)
+  entityId       String?       @map("entity_id") @db.Uuid
+  metadata       Json?
+  ipAddress      String?       @map("ip_address") @db.VarChar(80)
+  userAgent      String?       @map("user_agent") @db.VarChar(300)
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([organizationId])
+  @@index([actorUserId])
+  @@index([createdAt])
+  @@index([organizationId, entityType, createdAt])
+  @@map("audit_logs")
+}
+
+model OrganizationSetting {
+  id                 String        @id @default(uuid()) @db.Uuid
+  organizationId     String        @unique @map("organization_id") @db.Uuid
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  timezone           String        @default("UTC") @db.VarChar(80)
+  locale             String        @default("en-US") @db.VarChar(20)
+  currency           String        @default("USD") @db.VarChar(12)
+  workDayHours       Int           @default(8) @map("work_day_hours")
+  weekStartsOn       Int           @default(1) @map("week_starts_on")
+  trackingEnabled    Boolean       @default(true) @map("tracking_enabled")
+  idleTimeoutMinutes Int           @default(10) @map("idle_timeout_minutes")
+  createdAt          DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime      @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@map("organization_settings")
+}
