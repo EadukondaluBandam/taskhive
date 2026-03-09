@@ -79,7 +79,7 @@ model User {
   id                       String                @id @default(uuid()) @db.Uuid
   name                     String                @db.VarChar(120)
   email                    String                @unique @db.VarChar(255)
-  password                 String?               @map("password_hash") @db.VarChar(255)
+  passwordHash             String?               @map("password_hash") @db.VarChar(255)
   role                     Role                  @default(employee)
   status                   UserStatus            @default(pending)
   inviteToken              String?               @unique @map("invite_token") @db.VarChar(255)

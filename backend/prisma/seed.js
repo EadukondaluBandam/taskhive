@@ -23,7 +23,7 @@ const run = async () => {
     data: {
       name: "Super Admin",
       email,
-      password: passwordHash,
+      passwordHash,
       role: "super_admin",
       status: "active"
     }
@@ -40,4 +40,5 @@ run()
   .finally(async () => {
     await prisma.$disconnect();
   });
+
 

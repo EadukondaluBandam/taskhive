@@ -15,7 +15,7 @@ const ensureSuperAdmin = async () => {
     data: {
       name: "Super Admin",
       email: env.SUPER_ADMIN_EMAIL,
-      password: passwordHash,
+      passwordHash,
       role: ROLES.SUPER_ADMIN,
       status: "active"
     }
@@ -25,4 +25,5 @@ const ensureSuperAdmin = async () => {
 module.exports = {
   ensureSuperAdmin
 };
+
 

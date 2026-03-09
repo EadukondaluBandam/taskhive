@@ -123,7 +123,7 @@ const acceptInvitation = async ({ token, name, password }) => {
       data: {
         name,
         email: invitation.email,
-        password: passwordHash,
+        passwordHash,
         role: userRole,
         status: "active",
         organizationId: invitation.organizationId
@@ -167,4 +167,5 @@ module.exports = {
   sendInvitation,
   acceptInvitation
 };
+
 

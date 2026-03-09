@@ -75,13 +75,9 @@ const getMe = async (userId) =>
     }
   });
 
-const createUser = async ({ name, email, role, organizationId: payloadOrganizationId }, actor) => {
+const createUser = async ({ name, email, organizationId: payloadOrganizationId }, actor) => {
   const normalizedEmail = email.trim().toLowerCase();
   const organizationId = resolveOrganizationScope(actor, payloadOrganizationId);
-
-  if (role === ROLES.SUPER_ADMIN) {
-    throw new ApiError(StatusCodes.FORBIDDEN, "Cannot create super_admin through invite flow");
-  }
 
   const existingUser = await prisma.user.findUnique({
     where: { email: normalizedEmail },
@@ -99,9 +95,9 @@ const createUser = async ({ name, email, role, organizationId: payloadOrganizati
     data: {
       name: name.trim(),
       email: normalizedEmail,
-      role,
+      role: ROLES.EMPLOYEE,
       status: "pending",
-      password: null,
+      passwordHash: null,
       inviteToken,
       inviteTokenExpiry,
       organizationId

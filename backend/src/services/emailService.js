@@ -34,12 +34,11 @@ const sendEmail = async (to, subject, html) => {
 const sendInviteEmail = async ({ to, inviteLink }) => {
   return sendEmail(
     to,
-    "Set your TaskHive password",
+    "You have been invited to TaskHive",
     `
-      <h2>Welcome to TaskHive</h2>
-      <p>Your account has been created by an administrator.</p>
+      <h2>You have been invited to TaskHive</h2>
       <p>Click the link below to create your password:</p>
-      <a href="${inviteLink}">Create Password</a>
+      <a href="${inviteLink}">${inviteLink}</a>
       <p>This link expires in 24 hours.</p>
     `
   );

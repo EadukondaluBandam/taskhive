@@ -63,7 +63,7 @@ const register = async ({ name, email, password, role, organizationId }, actor) 
     data: {
       name,
       email,
-      password: passwordHash,
+      passwordHash,
       role: role || ROLES.EMPLOYEE,
       status: "active",
       organizationId: organizationId || null
@@ -102,9 +102,11 @@ const registerCompany = async ({ companyName, adminName, email, password }) => {
       data: {
         name: adminName,
         email,
-        password: passwordHash,
+        passwordHash,
         role: ROLES.ADMIN,
         status: "active",
+        inviteToken: null,
+        inviteTokenExpiry: null,
         organizationId: organization.id
       }
     });
@@ -140,16 +142,16 @@ const login = async ({ email, password }) => {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
   }
 
-  if (!user.password) {
-    logger.warn("Login failed: account has no password set", { email, userId: user.id });
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Account setup is incomplete. Please set your password using the invite email.");
-  }
   if (user.status === "pending") {
     logger.warn("Login failed: pending account", { email, userId: user.id });
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Account is pending activation. Please complete password setup.");
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Please check your email to set password");
+  }
+  if (!user.passwordHash) {
+    logger.warn("Login failed: account has no password hash", { email, userId: user.id });
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
   }
 
-  const matched = await bcrypt.compare(password, user.password);
+  const matched = await bcrypt.compare(password, user.passwordHash);
   if (!matched) {
     logger.warn("Login failed: invalid password", { email });
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
@@ -278,7 +280,7 @@ const resetPassword = async ({ token, password }) => {
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: resetRecord.userId },
-      data: { password: passwordHash }
+      data: { passwordHash }
     });
 
     await tx.passwordReset.update({
@@ -309,7 +311,7 @@ const setPassword = async ({ token, password }) => {
   await prisma.user.update({
     where: { id: user.id },
     data: {
-      password: passwordHash,
+      passwordHash,
       status: "active",
       inviteToken: null,
       inviteTokenExpiry: null
