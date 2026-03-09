@@ -33,7 +33,8 @@ async function seedSuperAdmin(): Promise<void> {
       name: "Super Admin",
       email: email.toLowerCase(),
       password: passwordHash,
-      role: Role.super_admin
+      role: Role.super_admin,
+      status: "active"
     }
   });
 

@@ -1,39 +1,24 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 const logger = require("../utils/logger");
-const { buildInviteEmailHtml } = require("../mail/inviteTemplate");
 
-const getTransporter = () => {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-
-  if (!host || !user || !pass) {
-    throw new Error("SMTP_HOST, SMTP_USER and SMTP_PASS must be configured");
+const getResendClient = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error("RESEND_API_KEY is not configured");
   }
-
-  return nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass }
-  });
+  return new Resend(apiKey);
 };
 
 const sendEmail = async (to, subject, html) => {
   try {
-    const from = process.env.EMAIL_FROM;
-    if (!from) {
-      throw new Error("EMAIL_FROM is not configured");
-    }
+    const from = process.env.EMAIL_FROM || "TaskHive <onboarding@resend.dev>";
+    const resend = getResendClient();
 
-    const transporter = getTransporter();
-    const result = await transporter.sendMail({
+    const result = await resend.emails.send({
       from,
       to: Array.isArray(to) ? to : [to],
       subject,
-      html,
-      text: html.replace(/<[^>]+>/g, " ")
+      html
     });
 
     return result;
@@ -47,7 +32,17 @@ const sendEmail = async (to, subject, html) => {
 };
 
 const sendInviteEmail = async ({ to, inviteLink }) => {
-  return sendEmail(to, "Welcome to TaskHive", buildInviteEmailHtml({ inviteLink }));
+  return sendEmail(
+    to,
+    "Set your TaskHive password",
+    `
+      <h2>Welcome to TaskHive</h2>
+      <p>Your account has been created by an administrator.</p>
+      <p>Click the link below to create your password:</p>
+      <a href="${inviteLink}">Create Password</a>
+      <p>This link expires in 24 hours.</p>
+    `
+  );
 };
 
 module.exports = {

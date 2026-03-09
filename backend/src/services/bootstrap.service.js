@@ -16,7 +16,8 @@ const ensureSuperAdmin = async () => {
       name: "Super Admin",
       email: env.SUPER_ADMIN_EMAIL,
       password: passwordHash,
-      role: ROLES.SUPER_ADMIN
+      role: ROLES.SUPER_ADMIN,
+      status: "active"
     }
   });
 };

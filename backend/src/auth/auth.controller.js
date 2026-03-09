@@ -90,7 +90,7 @@ const setPassword = async (req, res) => {
   await authService.setPassword(req.validated.body);
   res.status(StatusCodes.OK).json({
     success: true,
-    message: "Password set successfully",
+    message: "Password created successfully",
     data: {}
   });
 };

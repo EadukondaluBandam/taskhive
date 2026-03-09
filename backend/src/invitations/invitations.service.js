@@ -125,6 +125,7 @@ const acceptInvitation = async ({ token, name, password }) => {
         email: invitation.email,
         password: passwordHash,
         role: userRole,
+        status: "active",
         organizationId: invitation.organizationId
       }
     });

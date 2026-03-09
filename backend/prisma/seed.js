@@ -24,7 +24,8 @@ const run = async () => {
       name: "Super Admin",
       email,
       password: passwordHash,
-      role: "super_admin"
+      role: "super_admin",
+      status: "active"
     }
   });
 

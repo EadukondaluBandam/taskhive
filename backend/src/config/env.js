@@ -16,14 +16,7 @@ const envSchema = z.object({
   COOKIE_SECRET: z.string().min(16),
   FRONTEND_URL: z.string().url(),
   APP_BASE_URL: z.string().url().optional(),
-  SMTP_HOST: z.string().min(1).optional(),
-  SMTP_PORT: z
-    .string()
-    .transform((v) => Number(v))
-    .pipe(z.number().int().positive())
-    .optional(),
-  SMTP_USER: z.string().min(1).optional(),
-  SMTP_PASS: z.string().min(1).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
   EMAIL_FROM: z.string().email().optional(),
   SUPER_ADMIN_EMAIL: z.string().email(),
   SUPER_ADMIN_PASSWORD: z.string().min(8),

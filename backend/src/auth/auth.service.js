@@ -65,6 +65,7 @@ const register = async ({ name, email, password, role, organizationId }, actor) 
       email,
       password: passwordHash,
       role: role || ROLES.EMPLOYEE,
+      status: "active",
       organizationId: organizationId || null
     }
   });
@@ -103,6 +104,7 @@ const registerCompany = async ({ companyName, adminName, email, password }) => {
         email,
         password: passwordHash,
         role: ROLES.ADMIN,
+        status: "active",
         organizationId: organization.id
       }
     });

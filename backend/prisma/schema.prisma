@@ -81,7 +81,7 @@ model User {
   email                    String                @unique @db.VarChar(255)
   password                 String?               @map("password_hash") @db.VarChar(255)
   role                     Role                  @default(employee)
-  status                   UserStatus            @default(active)
+  status                   UserStatus            @default(pending)
   inviteToken              String?               @unique @map("invite_token") @db.VarChar(255)
   inviteTokenExpiry        DateTime?             @map("invite_token_expiry") @db.Timestamptz(6)
   organizationId           String?               @map("organization_id") @db.Uuid
