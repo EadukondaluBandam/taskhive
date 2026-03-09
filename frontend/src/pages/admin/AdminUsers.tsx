@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Search, Filter, MoreVertical, UserCheck, UserX, Eye, TrendingUp, Plus } from 'lucide-react';
-import { UserStorage, NotificationStorage } from '@/lib/storage';
+import { Search, MoreVertical, UserCheck, UserX, Eye, TrendingUp, Plus, Trash2 } from 'lucide-react';
 import { User } from '@/lib/types';
+import { userApi, type UserDto } from '@/api/userApi';
+import { toApiErrorMessage } from '@/api/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import {
@@ -46,11 +47,30 @@ export default function AdminUsers() {
   });
 
   useEffect(() => {
-    loadUsers();
+    void loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    setUsers(UserStorage.getAll());
+  const mapApiUserToViewUser = (apiUser: UserDto): User => ({
+    id: apiUser.id,
+    name: apiUser.name,
+    email: apiUser.email,
+    role: apiUser.role === 'employee' ? 'employee' : 'admin',
+    department: 'General',
+    status: apiUser.status === 'active' ? 'active' : 'inactive',
+    productivity: 0,
+    totalHours: 0,
+    joinedDate: new Date(apiUser.createdAt).toISOString().split('T')[0],
+  });
+
+  const loadUsers = async () => {
+    try {
+      const apiUsers = await userApi.listUsers();
+      setUsers(apiUsers.map(mapApiUserToViewUser));
+    } catch (error) {
+      toast.error('Failed to load users', {
+        description: toApiErrorMessage(error),
+      });
+    }
   };
 
   const filteredUsers = users.filter((user) => {
@@ -65,57 +85,52 @@ export default function AdminUsers() {
     return matchesSearch && matchesRole && matchesStatus;
   });
 
-  const handleCreateUser = () => {
+  const handleCreateUser = async () => {
     if (!newUser.name || !newUser.email) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    // Check if email already exists
-    if (UserStorage.getByEmail(newUser.email)) {
-      toast.error('A user with this email already exists');
-      return;
+    try {
+      await userApi.createUser({
+        name: newUser.name.trim(),
+        email: newUser.email.trim(),
+        role: newUser.role,
+      });
+
+      toast.success('User invited successfully');
+      setShowCreateModal(false);
+      setNewUser({
+        name: '',
+        email: '',
+        role: 'employee',
+        department: 'Development',
+        status: 'active',
+      });
+      await loadUsers();
+    } catch (error) {
+      toast.error('Failed to create user', {
+        description: toApiErrorMessage(error),
+      });
     }
-
-    const createdUser = UserStorage.create({
-      ...newUser,
-      productivity: 0,
-      totalHours: 0,
-      joinedDate: new Date().toISOString().split('T')[0],
-    });
-
-    toast.success('User Created', {
-      description: `${createdUser.name} has been added successfully`,
-    });
-
-    setShowCreateModal(false);
-    setNewUser({
-      name: '',
-      email: '',
-      role: 'employee',
-      department: 'Development',
-      status: 'active',
-    });
-    loadUsers();
   };
 
   const handleToggleStatus = (user: User) => {
-    const updated = UserStorage.toggleStatus(user.id);
-    if (updated) {
-      const action = updated.status === 'active' ? 'activated' : 'deactivated';
-      toast.success(`User ${action}`, {
-        description: `${user.name} has been ${action}`,
+    toast.info(`Status change for ${user.name} is not implemented yet.`);
+  };
+
+  const handleDelete = async (id: string) => {
+    const confirmDelete = window.confirm('Are you sure you want to delete this user?');
+    if (!confirmDelete) return;
+
+    try {
+      await userApi.deleteUser(id);
+      toast.success('User deleted successfully');
+      await loadUsers();
+    } catch (error) {
+      toast.error('Failed to delete user', {
+        description: toApiErrorMessage(error),
       });
-      
-      // Notify the user
-      NotificationStorage.create({
-        userId: user.id,
-        type: 'admin_update',
-        title: `Account ${action}`,
-        message: `Your account has been ${action} by an administrator`,
-      });
-      
-      loadUsers();
     }
   };
 
@@ -256,6 +271,13 @@ export default function AdminUsers() {
                               Activate
                             </>
                           )}
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDelete(user.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 size={14} className="mr-2" />
+                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

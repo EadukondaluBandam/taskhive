@@ -121,8 +121,53 @@ const createUser = async ({ name, email, role, organizationId: payloadOrganizati
   return sanitizeUser(createdUser);
 };
 
+const deleteUser = async (userId, actor) => {
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      organizationId: true
+    }
+  });
+
+  if (!target) {
+    throw new ApiError(StatusCodes.NOT_FOUND, "User not found");
+  }
+
+  if (actor.sub === userId) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "You cannot delete your own account");
+  }
+
+  if (target.role === ROLES.SUPER_ADMIN || target.email === process.env.SUPER_ADMIN_EMAIL) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Main admin account cannot be deleted");
+  }
+
+  if (actor.role === ROLES.ADMIN) {
+    if (!actor.organizationId || actor.organizationId !== target.organizationId) {
+      throw new ApiError(StatusCodes.FORBIDDEN, "Cross-organization user deletion is not allowed");
+    }
+    if (target.role === ROLES.ADMIN) {
+      throw new ApiError(StatusCodes.FORBIDDEN, "Admins cannot delete other admin accounts");
+    }
+  }
+
+  try {
+    await prisma.user.delete({
+      where: { id: userId }
+    });
+  } catch (error) {
+    if (error?.code === "P2003") {
+      throw new ApiError(StatusCodes.CONFLICT, "User cannot be deleted because related records exist");
+    }
+    throw error;
+  }
+};
+
 module.exports = {
   listUsers,
   getMe,
-  createUser
+  createUser,
+  deleteUser
 };

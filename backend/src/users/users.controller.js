@@ -22,8 +22,18 @@ const createUser = async (req, res) => {
   });
 };
 
+const deleteUser = async (req, res) => {
+  await service.deleteUser(req.validated.params.id, req.user);
+  res.status(StatusCodes.OK).json({
+    success: true,
+    message: "User deleted successfully",
+    data: {}
+  });
+};
+
 module.exports = {
   listUsers,
   getMe,
-  createUser
+  createUser,
+  deleteUser
 };

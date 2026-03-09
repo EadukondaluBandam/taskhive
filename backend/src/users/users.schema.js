@@ -12,6 +12,15 @@ const createUserSchema = z.object({
   query: z.object({}).optional()
 });
 
+const deleteUserSchema = z.object({
+  body: z.object({}).optional(),
+  params: z.object({
+    id: z.string().uuid()
+  }),
+  query: z.object({}).optional()
+});
+
 module.exports = {
-  createUserSchema
+  createUserSchema,
+  deleteUserSchema
 };

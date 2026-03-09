@@ -31,5 +31,9 @@ export const userApi = {
   async createUser(input: CreateUserInput) {
     const { data } = await apiClient.post<ApiResponse<UserDto>>("/users", input);
     return data.data;
+  },
+
+  async deleteUser(id: string) {
+    await apiClient.delete<ApiResponse<Record<string, never>>>(`/users/${id}`);
   }
 };
