@@ -84,7 +84,7 @@ export default function Login() {
 
     if (result.success) {
       const user = await getCurrentUser();
-      if (user?.role === "admin") {
+      if (user?.role === "admin" || user?.role === "super_admin") {
         navigate("/admin");
       } else {
         navigate("/employee");

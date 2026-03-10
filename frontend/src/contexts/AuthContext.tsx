@@ -10,7 +10,7 @@ interface AuthUser {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "employee";
+  role: "super_admin" | "admin" | "employee";
   department: string;
   companyName?: string;
 }
@@ -46,7 +46,7 @@ const mapApiUser = (apiUser: AuthUserResponse): AuthUser => ({
   id: apiUser.id,
   name: apiUser.name,
   email: apiUser.email,
-  role: apiUser.role === "employee" ? "employee" : "admin",
+  role: apiUser.role as AuthUser["role"],
   department: "General",
   companyName: undefined
 });

@@ -38,15 +38,24 @@ import EmployeeProfile from "./pages/employee/EmployeeProfile";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: 'admin' | 'employee' }) {
+function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: 'super_admin' | 'admin' | 'employee' }) {
   const { user, isAuthenticated } = useAuth();
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to={user?.role === 'admin' ? '/admin' : '/employee'} replace />;
+  if (requiredRole) {
+    const hasAccess =
+      requiredRole === 'employee'
+        ? user?.role === 'employee'
+        : requiredRole === 'admin'
+        ? user?.role === 'admin' || user?.role === 'super_admin'
+        : user?.role === 'super_admin';
+
+    if (!hasAccess) {
+      return <Navigate to={user?.role === 'admin' || user?.role === 'super_admin' ? '/admin' : '/employee'} replace />;
+    }
   }
 
   return <>{children}</>;
@@ -62,7 +71,7 @@ function AppRoutes() {
         path="/"
         element={
           isAuthenticated ? (
-            <Navigate to={user?.role === 'admin' ? '/admin' : '/employee'} replace />
+            <Navigate to={user?.role === 'admin' || user?.role === 'super_admin' ? '/admin' : '/employee'} replace />
           ) : (
             <Navigate to="/login" replace />
           )

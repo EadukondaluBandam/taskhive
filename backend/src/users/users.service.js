@@ -13,6 +13,7 @@ const sanitizeUser = (user) => ({
   role: user.role,
   status: user.status,
   organizationId: user.organizationId,
+  adminId: user.adminId || null,
   createdAt: user.createdAt
 });
 
@@ -54,6 +55,7 @@ const listUsers = async (actor, pagination) => {
       role: true,
       status: true,
       organizationId: true,
+      adminId: true,
       createdAt: true
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }]
@@ -71,13 +73,18 @@ const getMe = async (userId) =>
       role: true,
       status: true,
       organizationId: true,
+      adminId: true,
       createdAt: true
     }
   });
 
-const createUser = async ({ name, email, organizationId: payloadOrganizationId }, actor) => {
+const createUser = async ({ name, email, role = ROLES.EMPLOYEE, organizationId: payloadOrganizationId }, actor) => {
   const normalizedEmail = email.trim().toLowerCase();
   const organizationId = resolveOrganizationScope(actor, payloadOrganizationId);
+
+  if (role === ROLES.ADMIN && actor.role !== ROLES.SUPER_ADMIN) {
+    throw new ApiError(StatusCodes.FORBIDDEN, "Only super_admin can create admins");
+  }
 
   const existingUser = await prisma.user.findUnique({
     where: { email: normalizedEmail },
@@ -95,12 +102,13 @@ const createUser = async ({ name, email, organizationId: payloadOrganizationId }
     data: {
       name: name.trim(),
       email: normalizedEmail,
-      role: ROLES.EMPLOYEE,
+      role,
       status: "pending",
       passwordHash: null,
       inviteToken,
       inviteTokenExpiry,
-      organizationId
+      organizationId,
+      adminId: role === ROLES.EMPLOYEE && actor.role === ROLES.ADMIN ? actor.sub : null
     }
   });
 
@@ -147,6 +155,11 @@ const deleteUser = async (userId, actor) => {
     if (target.role === ROLES.ADMIN) {
       throw new ApiError(StatusCodes.FORBIDDEN, "Admins cannot delete other admin accounts");
     }
+  }
+
+  // If super admin deletes an admin, cascade delete that admin's employees as well.
+  if (actor.role === ROLES.SUPER_ADMIN && target.role === ROLES.ADMIN) {
+    await prisma.user.deleteMany({ where: { adminId: target.id } });
   }
 
   try {

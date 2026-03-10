@@ -5,7 +5,7 @@ const createUserSchema = z.object({
   body: z.object({
     name: z.string().min(2).max(120),
     email: z.string().email(),
-    role: z.literal(ROLES.EMPLOYEE).optional().default(ROLES.EMPLOYEE),
+    role: z.enum([ROLES.ADMIN, ROLES.EMPLOYEE]).optional().default(ROLES.EMPLOYEE),
     organizationId: z.string().uuid().optional()
   }),
   params: z.object({}).optional(),

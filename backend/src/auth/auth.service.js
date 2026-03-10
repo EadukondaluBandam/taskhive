@@ -13,7 +13,8 @@ const sanitizeUser = (user) => ({
   email: user.email,
   name: user.name,
   role: user.role,
-  organizationId: user.organizationId
+  organizationId: user.organizationId,
+  adminId: user.adminId || null
 });
 
 const buildTokens = (user) => {
@@ -66,7 +67,8 @@ const register = async ({ name, email, password, role, organizationId }, actor) 
       passwordHash,
       role: role || ROLES.EMPLOYEE,
       status: "active",
-      organizationId: organizationId || null
+      organizationId: organizationId || null,
+      adminId: actor?.role === ROLES.ADMIN ? actor.sub : null
     }
   });
 

@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 import { StatCard } from '@/components/StatCard';
 import { ProgressRing } from '@/components/ProgressRing';
-import { UserStorage, ProjectStorage, TaskStorage, TimeEntryStorage, TimerStorage } from '@/lib/storage';
-import { getWeeklyData, getProductivityByTeam } from '@/lib/analytics';
+import { dashboardApi, type DashboardSummary } from '@/api/dashboardApi';
+import { useQuery } from '@tanstack/react-query';
 import {
   BarChart,
   Bar,
@@ -20,37 +20,20 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const [users, setUsers] = useState(UserStorage.getAll());
-  const [projects, setProjects] = useState(ProjectStorage.getAll());
-  const [tasks, setTasks] = useState(TaskStorage.getAll());
-  const [activeTimers, setActiveTimers] = useState(TimerStorage.getAllActive());
-  const [weeklyData, setWeeklyData] = useState(getWeeklyData());
-  const [productivityByTeam, setProductivityByTeam] = useState(getProductivityByTeam());
+  const { data: summary, isLoading } = useQuery<DashboardSummary>(["dashboard", "summary"], dashboardApi.getSummary);
 
-  useEffect(() => {
-    // Refresh data periodically
-    const interval = setInterval(() => {
-      setUsers(UserStorage.getAll());
-      setProjects(ProjectStorage.getAll());
-      setTasks(TaskStorage.getAll());
-      setActiveTimers(TimerStorage.getAllActive());
-      setWeeklyData(getWeeklyData());
-      setProductivityByTeam(getProductivityByTeam());
-    }, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const activeUsers = users.filter(u => u.status === 'active').length;
-  const activeProjects = projects.filter(p => p.status === 'active').length;
-  const pendingTasks = tasks.filter(t => t.status === 'pending').length;
-  const avgProductivity = users.length
-    ? Math.round(users.reduce((acc, u) => acc + u.productivity, 0) / users.length)
-    : 0;
-  const totalHours = users.reduce((acc, u) => acc + u.totalHours, 0);
+  const activeUsers = summary?.totalEmployees ?? 0;
+  const activeProjects = summary?.activeProjects ?? 0;
+  const pendingTasks = 0; // Pending tasks are not tracked in the current API
+  const avgProductivity = summary?.productivityScore ?? 0;
+  const totalHours = summary?.totalHours ?? 0;
+  const activeTimers: any[] = [];
+  const weeklyData = useMemo(() => [], []);
+  const productivityByTeam = useMemo(() => [], []);
 
   return (
     <div className="space-y-6">

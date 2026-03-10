@@ -2,7 +2,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: "admin" | "employee";
+  role: "super_admin" | "admin" | "employee";
   department: string;
   status: "active" | "inactive";
   avatar?: string;
@@ -10,6 +10,7 @@ export interface User {
   totalHours: number;
   joinedDate: string;
   companyName?: string;
+  adminName?: string;
 }
 
 export interface Project {
