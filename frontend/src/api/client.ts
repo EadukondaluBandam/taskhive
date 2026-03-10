@@ -1,9 +1,10 @@
 import axios, { AxiosError } from "axios";
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").trim();
+const API_BASE_URL = (import.meta.env.VITE_API_URL || "").trim() || "/api";
 
 if (!API_BASE_URL) {
-  throw new Error("VITE_API_URL is required");
+  // Fallback to /api for deployments where VITE_API_URL is not set
+  console.warn("VITE_API_URL is not set, defaulting to /api");
 }
 
 let accessToken: string | null = null;

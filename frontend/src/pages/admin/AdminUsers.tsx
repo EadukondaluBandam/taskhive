@@ -136,7 +136,8 @@ export default function AdminUsers() {
           email: newUser.email.trim()
         });
       } else {
-        throw new Error('Not allowed');
+        toast.error('You do not have permission to create users.');
+        return;
       }
 
       toast.success('User created successfully');
@@ -174,7 +175,8 @@ export default function AdminUsers() {
       } else if (isAdmin) {
         await userApi.deleteEmployee(id);
       } else {
-        throw new Error('Not allowed');
+        toast.error('You do not have permission to delete this user.');
+        return;
       }
 
       toast.success('User deleted successfully');
