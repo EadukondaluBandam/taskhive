@@ -100,6 +100,7 @@ function AppRoutes() {
 
       <Route path="/download" element={<Download />} />
       <Route path="/set-password" element={<SetPassword />} />
+      <Route path="/reset-password" element={<SetPassword />} />
 
       {/* Admin Routes */}
       <Route path="/admin" element={<ProtectedRoute requiredRole="admin"><AdminLayout><AdminDashboard /></AdminLayout></ProtectedRoute>} />

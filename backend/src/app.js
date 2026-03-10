@@ -18,11 +18,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser(process.env.COOKIE_SECRET));
 app.use(morgan("combined"));
 
-app.get("/health", (_req, res) => {
-  res.status(200).json({ success: true, message: "TaskHive API is healthy" });
-});
-
-app.get("/test-email", async (req, res) => {
+app.get("/api/test-email", async (req, res) => {
   try {
     const to = req.query.to || process.env.SUPER_ADMIN_EMAIL;
     const response = await sendEmail(to, "TaskHive Email Test", "<h2>Email working successfully</h2>");

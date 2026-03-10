@@ -94,7 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const registerMutation = useMutation({
-    mutationFn: authApi.register
+    mutationFn: authApi.registerCompany
   });
 
   const logoutMutation = useMutation({
@@ -230,11 +230,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [checkSession, user]);
 
-  const forgotPassword = useCallback(async (_email: string): Promise<{ success: boolean; error?: string }> => {
-    return {
-      success: false,
-      error: "Forgot password endpoint is not available yet."
-    };
+  const forgotPassword = useCallback(async (email: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      await authApi.forgotPassword(email.trim());
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: toApiErrorMessage(error, "Failed to send reset link") };
+    }
   }, []);
 
   const registerNewAdmin = useCallback(

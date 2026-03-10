@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Loader2, Lock, Eye, EyeOff } from "lucide-react";
 import { authApi } from "@/api/authApi";
 import { toApiErrorMessage } from "@/api/client";
@@ -9,8 +9,10 @@ import { Input } from "@/components/ui/input";
 
 export default function SetPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const token = useMemo(() => (searchParams.get("token") || "").trim(), [searchParams]);
+  const isResetMode = location.pathname === "/reset-password";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -40,10 +42,14 @@ export default function SetPassword() {
 
     try {
       setIsSubmitting(true);
-      await authApi.setPassword({ token, password });
+      if (isResetMode) {
+        await authApi.resetPassword({ token, newPassword: password });
+      } else {
+        await authApi.setPassword({ token, password });
+      }
       navigate("/login", { replace: true });
     } catch (err) {
-      setError(toApiErrorMessage(err, "Failed to set password"));
+      setError(toApiErrorMessage(err, isResetMode ? "Failed to reset password" : "Failed to set password"));
     } finally {
       setIsSubmitting(false);
     }
@@ -56,9 +62,11 @@ export default function SetPassword() {
           <div className="mb-4 flex justify-center">
             <Logo size="lg" />
           </div>
-          <h1 className="text-2xl font-semibold text-foreground">Set Password</h1>
+          <h1 className="text-2xl font-semibold text-foreground">{isResetMode ? "Reset Password" : "Set Password"}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create your TaskHive password to activate your account.
+            {isResetMode
+              ? "Choose a new password for your TaskHive account."
+              : "Create your TaskHive password to activate your account."}
           </p>
         </div>
 

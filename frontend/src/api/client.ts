@@ -2,7 +2,13 @@ import axios, { AxiosError } from "axios";
 
 export const TOKEN_STORAGE_KEY = "taskhive_token";
 
-const API_BASE_URL = (import.meta.env.VITE_API_URL || "").trim() || "/api";
+const normalizeApiBaseUrl = (rawValue: string) => {
+  const trimmed = rawValue.trim();
+  if (!trimmed) return "/api";
+  return trimmed.endsWith("/api") ? trimmed : `${trimmed.replace(/\/$/, "")}/api`;
+};
+
+const API_BASE_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL || "");
 
 let accessToken: string | null =
   typeof window !== "undefined" ? window.localStorage.getItem(TOKEN_STORAGE_KEY) : null;

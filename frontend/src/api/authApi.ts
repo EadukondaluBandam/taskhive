@@ -35,6 +35,11 @@ export interface SetPasswordInput {
   password: string;
 }
 
+export interface ResetPasswordInput {
+  token: string;
+  newPassword: string;
+}
+
 const applyAuthPayload = (payload: AuthPayload) => {
   setAccessToken(payload.accessToken);
   return payload;
@@ -49,6 +54,19 @@ export const authApi = {
   async register(input: RegisterInput) {
     const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register", input);
     return applyAuthPayload(data.data);
+  },
+
+  async registerCompany(input: RegisterInput) {
+    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register-company", input);
+    return applyAuthPayload(data.data);
+  },
+
+  async forgotPassword(email: string) {
+    await apiClient.post<ApiResponse<Record<string, never>>>("/auth/forgot-password", { email });
+  },
+
+  async resetPassword(input: ResetPasswordInput) {
+    await apiClient.post<ApiResponse<Record<string, never>>>("/auth/reset-password", input);
   },
 
   async refresh(refreshToken: string) {
