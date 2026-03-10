@@ -21,8 +21,13 @@ import AdminTrackedTime from "./pages/admin/AdminTrackedTime";
 import AdminOrganization from "./pages/admin/AdminOrganization";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
+import EmployeeTimer from "./pages/employee/EmployeeTimer";
+import EmployeeTimesheets from "./pages/employee/EmployeeTimesheets";
+import EmployeeActivities from "./pages/employee/EmployeeActivities";
+import EmployeeProductivity from "./pages/employee/EmployeeProductivity";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
 import AdminProfile from "./pages/admin/AdminProfile";
+import Download from "./pages/Download";
 
 const queryClient = new QueryClient();
 
@@ -44,7 +49,7 @@ function ProtectedRoute({
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === "employee" ? "/employee" : "/admin/dashboard"} replace />;
+    return <Navigate to={user.role === "employee" ? "/employee/dashboard" : "/admin/dashboard"} replace />;
   }
 
   return <>{children}</>;
@@ -63,7 +68,7 @@ function AppRoutes() {
         path="/"
         element={
           isAuthenticated ? (
-            <Navigate to={user?.role === "employee" ? "/employee" : "/admin/dashboard"} replace />
+            <Navigate to={user?.role === "employee" ? "/employee/dashboard" : "/admin/dashboard"} replace />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -73,7 +78,7 @@ function AppRoutes() {
         path="/login"
         element={
           isAuthenticated ? (
-            <Navigate to={user?.role === "employee" ? "/employee" : "/admin/dashboard"} replace />
+            <Navigate to={user?.role === "employee" ? "/employee/dashboard" : "/admin/dashboard"} replace />
           ) : (
             <Login />
           )
@@ -108,22 +113,19 @@ function AppRoutes() {
         path="/employee"
         element={
           <ProtectedRoute allowedRoles={["employee"]}>
-            <EmployeeLayout>
-              <EmployeeDashboard />
-            </EmployeeLayout>
+            <EmployeeLayout />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/employee/profile"
-        element={
-          <ProtectedRoute allowedRoles={["employee"]}>
-            <EmployeeLayout>
-              <EmployeeProfile />
-            </EmployeeLayout>
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route index element={<Navigate to="/employee/dashboard" replace />} />
+        <Route path="dashboard" element={<EmployeeDashboard />} />
+        <Route path="timer" element={<EmployeeTimer />} />
+        <Route path="timesheets" element={<EmployeeTimesheets />} />
+        <Route path="activities" element={<EmployeeActivities />} />
+        <Route path="productivity" element={<EmployeeProductivity />} />
+        <Route path="profile" element={<EmployeeProfile />} />
+        <Route path="download" element={<Download />} />
+      </Route>
 
       <Route path="*" element={<NotFound />} />
     </Routes>

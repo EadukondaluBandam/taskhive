@@ -1,17 +1,34 @@
 import { ReactNode, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, User, LogOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  PlayCircle,
+  CalendarClock,
+  Activity,
+  TrendingUp,
+  User,
+  Download,
+  LogOut,
+  ChevronLeft,
+  ChevronRight
+} from 'lucide-react';
 import { Logo } from '@/components/Logo';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface EmployeeLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 const navItems = [
-  { path: '/employee', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { path: '/employee/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { path: '/employee/timer', icon: PlayCircle, label: 'Timer' },
+  { path: '/employee/timesheets', icon: CalendarClock, label: 'Timesheets' },
+  { path: '/employee/activities', icon: Activity, label: 'Activity' },
+  { path: '/employee/productivity', icon: TrendingUp, label: 'Productivity' },
+  { path: '/employee/profile', icon: User, label: 'Profile' },
+  { path: '/employee/download', icon: Download, label: 'Download App' }
 ];
 
 export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
@@ -47,7 +64,7 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
 
         <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-4">
           {navItems.map((item) => {
-            const isActive = item.end ? location.pathname === item.path : location.pathname.startsWith(item.path);
+            const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
 
             return (
               <NavLink
@@ -106,7 +123,7 @@ export default function EmployeeLayout({ children }: EmployeeLayoutProps) {
             <p className="text-xs text-muted-foreground">{user?.companyName || 'Company workspace'}</p>
           </div>
         </header>
-        <div className="animate-fade-in p-6">{children}</div>
+        <div className="animate-fade-in p-6">{children ?? <Outlet />}</div>
       </main>
     </div>
   );
