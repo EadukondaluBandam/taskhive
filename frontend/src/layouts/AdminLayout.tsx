@@ -1,8 +1,17 @@
 import { ReactNode, useState } from 'react';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
+  FolderKanban,
+  ListTodo,
+  FileText,
+  Clock3,
+  TrendingUp,
+  Camera,
+  Activity,
+  Building2,
+  UserRound,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -13,12 +22,21 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface AdminLayoutProps {
-  children: ReactNode;
+  children?: ReactNode;
 }
 
 const navItems = [
-  { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
+  { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/admin/users', icon: Users, label: 'Users' },
+  { path: '/admin/projects', icon: FolderKanban, label: 'Projects' },
+  { path: '/admin/tasks', icon: ListTodo, label: 'Tasks' },
+  { path: '/admin/reports', icon: FileText, label: 'Reports' },
+  { path: '/admin/tracked-time', icon: Clock3, label: 'Tracked Time' },
+  { path: '/admin/productivity', icon: TrendingUp, label: 'Productivity' },
+  { path: '/admin/screenshots', icon: Camera, label: 'Screenshots' },
+  { path: '/admin/activity', icon: Activity, label: 'Activity' },
+  { path: '/admin/organization', icon: Building2, label: 'Organization' },
+  { path: '/admin/profile', icon: UserRound, label: 'Profile' },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -57,9 +75,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         {/* Navigation */}
         <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto scrollbar-thin">
           {navItems.map((item) => {
-            const isActive = item.end 
-              ? location.pathname === item.path 
-              : location.pathname.startsWith(item.path);
+            const isActive = location.pathname === item.path || location.pathname.startsWith(`${item.path}/`);
             
             return (
               <NavLink
@@ -141,7 +157,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Page content */}
         <div className="p-6 animate-fade-in">
-          {children}
+          {children ?? <Outlet />}
         </div>
       </main>
     </div>

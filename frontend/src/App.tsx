@@ -11,6 +11,14 @@ import NotFound from "./pages/NotFound";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminUsers from "./pages/admin/AdminUsers";
+import AdminProjects from "./pages/admin/AdminProjects";
+import AdminTasks from "./pages/admin/AdminTasks";
+import AdminReports from "./pages/admin/AdminReports";
+import AdminScreenshots from "./pages/admin/AdminScreenshots";
+import AdminProductivity from "./pages/admin/AdminProductivity";
+import AdminActivity from "./pages/admin/AdminActivity";
+import AdminTrackedTime from "./pages/admin/AdminTrackedTime";
+import AdminOrganization from "./pages/admin/AdminOrganization";
 import EmployeeLayout from "./layouts/EmployeeLayout";
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeProfile from "./pages/employee/EmployeeProfile";
@@ -36,7 +44,7 @@ function ProtectedRoute({
   }
 
   if (!allowedRoles.includes(user.role)) {
-    return <Navigate to={user.role === "employee" ? "/employee" : "/admin"} replace />;
+    return <Navigate to={user.role === "employee" ? "/employee" : "/admin/dashboard"} replace />;
   }
 
   return <>{children}</>;
@@ -55,7 +63,7 @@ function AppRoutes() {
         path="/"
         element={
           isAuthenticated ? (
-            <Navigate to={user?.role === "employee" ? "/employee" : "/admin"} replace />
+            <Navigate to={user?.role === "employee" ? "/employee" : "/admin/dashboard"} replace />
           ) : (
             <Navigate to="/login" replace />
           )
@@ -65,7 +73,7 @@ function AppRoutes() {
         path="/login"
         element={
           isAuthenticated ? (
-            <Navigate to={user?.role === "employee" ? "/employee" : "/admin"} replace />
+            <Navigate to={user?.role === "employee" ? "/employee" : "/admin/dashboard"} replace />
           ) : (
             <Login />
           )
@@ -78,32 +86,23 @@ function AppRoutes() {
         path="/admin"
         element={
           <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-            <AdminLayout>
-              <AdminDashboard />
-            </AdminLayout>
+            <AdminLayout />
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/admin/users"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-            <AdminLayout>
-              <AdminUsers />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/profile"
-        element={
-          <ProtectedRoute allowedRoles={["admin", "superadmin"]}>
-            <AdminLayout>
-              <AdminProfile />
-            </AdminLayout>
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route index element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="projects" element={<AdminProjects />} />
+        <Route path="tasks" element={<AdminTasks />} />
+        <Route path="reports" element={<AdminReports />} />
+        <Route path="screenshots" element={<AdminScreenshots />} />
+        <Route path="productivity" element={<AdminProductivity />} />
+        <Route path="activity" element={<AdminActivity />} />
+        <Route path="tracked-time" element={<AdminTrackedTime />} />
+        <Route path="organization" element={<AdminOrganization />} />
+        <Route path="profile" element={<AdminProfile />} />
+      </Route>
 
       <Route
         path="/employee"
