@@ -2,19 +2,30 @@ const { StatusCodes } = require("http-status-codes");
 const { verifyAccessToken } = require("../utils/jwt");
 const { ApiError } = require("../utils/ApiError");
 
-const ACCESS_COOKIE = "taskhive_access_token";
-
 const extractBearerToken = (header = "") => {
   const [scheme, token] = header.split(" ");
   if (scheme !== "Bearer" || !token) return null;
   return token;
 };
 
-const resolveAccessToken = (req) =>
-  extractBearerToken(req.headers.authorization) || req.cookies?.[ACCESS_COOKIE] || null;
+const normalizeAuthUser = (payload) => {
+  const id = payload.id || payload.sub;
+  const companyId = payload.companyId ?? payload.organizationId ?? null;
 
-const verifyJwt = (req, res, next) => {
+  return {
+    ...payload,
+    id,
+    sub: id,
+    companyId,
+    organizationId: companyId
+  };
+};
+
+const resolveAccessToken = (req) => extractBearerToken(req.headers.authorization || "");
+
+const authenticate = (req, res, next) => {
   const token = resolveAccessToken(req);
+
   if (!token) {
     return res.status(StatusCodes.UNAUTHORIZED).json({
       success: false,
@@ -24,31 +35,33 @@ const verifyJwt = (req, res, next) => {
   }
 
   try {
-    const payload = verifyAccessToken(token);
-    req.user = payload;
+    req.user = normalizeAuthUser(verifyAccessToken(token));
     return next();
-  } catch (_err) {
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid or expired token");
+  } catch (_error) {
+    return next(new ApiError(StatusCodes.UNAUTHORIZED, "Invalid or expired token"));
   }
 };
 
-const optionalVerifyJwt = (req, _res, next) => {
+const optionalAuthenticate = (req, _res, next) => {
   const token = resolveAccessToken(req);
-  if (!token) return next();
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
 
   try {
-    const payload = verifyAccessToken(token);
-    req.user = payload;
-  } catch (_err) {
+    req.user = normalizeAuthUser(verifyAccessToken(token));
+  } catch (_error) {
     req.user = null;
   }
 
-  next();
+  return next();
 };
 
 module.exports = {
-  verifyJwt,
-  optionalVerifyJwt,
-  authenticate: verifyJwt,
-  optionalAuthenticate: optionalVerifyJwt
+  authenticate,
+  optionalAuthenticate,
+  verifyJwt: authenticate,
+  optionalVerifyJwt: optionalAuthenticate
 };

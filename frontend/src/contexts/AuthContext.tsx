@@ -1,9 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { authApi, type AuthUserResponse } from "@/api/authApi";
-import { initializeStorage, NotificationStorage, ProjectStorage, SessionStorage, TaskStorage, TimeEntryStorage, TimerStorage, UserStorage } from "@/lib/storage";
-import { type User } from "@/lib/types";
-import { toApiErrorMessage } from "@/api/client";
+import { getAccessToken, toApiErrorMessage } from "@/api/client";
+import { NotificationStorage, ProjectStorage, SessionStorage, TaskStorage, TimeEntryStorage, TimerStorage } from "@/lib/storage";
 import { toast } from "sonner";
 
 interface AuthUser {
@@ -12,7 +11,9 @@ interface AuthUser {
   email: string;
   role: "super_admin" | "admin" | "employee";
   department: string;
-  companyName?: string;
+  companyId?: string | null;
+  companyName?: string | null;
+  createdBy?: string | null;
 }
 
 interface NewAdminData {
@@ -26,13 +27,14 @@ interface NewAdminData {
 interface AuthContextType {
   user: AuthUser | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (payload: { name: string; email: string; password: string; role?: "admin" | "employee" }) => Promise<{ success: boolean; error?: string }>;
+  register: (payload: { name: string; email: string; password: string; companyName: string }) => Promise<{ success: boolean; error?: string }>;
   logout: (reason?: string) => Promise<void>;
   getCurrentUser: () => Promise<AuthUser | null>;
   forgotPassword: (email: string) => Promise<{ success: boolean; error?: string }>;
   registerNewAdmin: (data: NewAdminData) => Promise<{ success: boolean; error?: string }>;
   updateProfile: (companyName: string) => Promise<void>;
   isAuthenticated: boolean;
+  isBootstrapping: boolean;
   sessionHours: number;
   checkSession: () => void;
 }
@@ -46,9 +48,11 @@ const mapApiUser = (apiUser: AuthUserResponse): AuthUser => ({
   id: apiUser.id,
   name: apiUser.name,
   email: apiUser.email,
-  role: apiUser.role as AuthUser["role"],
+  role: apiUser.role,
   department: "General",
-  companyName: undefined
+  companyId: apiUser.companyId ?? null,
+  companyName: apiUser.companyName ?? null,
+  createdBy: apiUser.createdBy ?? null
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -58,23 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [warningShown, setWarningShown] = useState(false);
   const [sessionStartAt, setSessionStartAt] = useState<string | null>(null);
 
-  useEffect(() => {
-    initializeStorage({ users: [], projects: [], tasks: [], timeEntries: [], activities: [] });
-  }, []);
-
   const bootstrapAuth = useQuery({
     queryKey: ["auth", "current-user"],
     queryFn: async () => {
-      try {
-        return await authApi.getCurrentUser();
-      } catch (_firstError) {
-        try {
-          await authApi.refresh();
-          return await authApi.getCurrentUser();
-        } catch (_secondError) {
-          return null;
-        }
-      }
+      if (!getAccessToken()) return null;
+      return authApi.getCurrentUser();
     },
     retry: false,
     staleTime: 5 * 60 * 1000
@@ -110,14 +102,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const getCurrentUser = useCallback(async (): Promise<AuthUser | null> => {
+    if (!getAccessToken()) return null;
+
     try {
       const current = await authApi.getCurrentUser();
       const mapped = mapApiUser(current);
       setUser(mapped);
       return mapped;
-    } catch (error) {
-      const message = toApiErrorMessage(error, "Failed to fetch current user");
-      toast.error("Session Error", { description: message });
+    } catch {
       return null;
     }
   }, []);
@@ -136,10 +128,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         NotificationStorage.notifyLogin(mapped.id);
         await queryClient.invalidateQueries({ queryKey: ["auth", "current-user"] });
 
-        toast.success("Welcome back!", {
-          description: `Logged in as ${mapped.name}`
-        });
-
         return { success: true };
       } catch (error) {
         return { success: false, error: toApiErrorMessage(error, "Login failed") };
@@ -149,18 +137,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const register = useCallback(
-    async (payload: { name: string; email: string; password: string; role?: "admin" | "employee" }) => {
+    async (payload: { name: string; email: string; password: string; companyName: string }) => {
       try {
-        await registerMutation.mutateAsync({
-          ...payload,
-          role: payload.role === "admin" ? "admin" : "employee"
-        });
+        const result = await registerMutation.mutateAsync(payload);
+        const mapped = mapApiUser(result.user);
+
+        setUser(mapped);
+        setSessionStartAt(new Date().toISOString());
+        setSessionHours(0);
+        setWarningShown(false);
+        SessionStorage.create(mapped.id);
+        await queryClient.invalidateQueries({ queryKey: ["auth", "current-user"] });
+
         return { success: true };
       } catch (error) {
         return { success: false, error: toApiErrorMessage(error, "Registration failed") };
       }
     },
-    [registerMutation]
+    [queryClient, registerMutation]
   );
 
   const logout = useCallback(
@@ -192,8 +186,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       try {
         await logoutMutation.mutateAsync();
-      } catch (_error) {
-        // Keep client-side logout behavior even if backend logout fails.
+      } catch {
+        // Client-side logout should still complete if the API call fails.
       }
 
       setUser(null);
@@ -254,37 +248,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!email || !password || !companyName || !adminName) {
         return { success: false, error: "All fields are required." };
       }
+
       if (password.length < 8) {
         return { success: false, error: "Password must be at least 8 characters." };
       }
+
       if (password !== confirmPassword) {
         return { success: false, error: "Passwords do not match." };
       }
 
-      try {
-        await authApi.registerCompany({
-          companyName,
-          adminName,
-          email,
-          password
-        });
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: toApiErrorMessage(error, "Admin registration failed") };
-      }
+      return register({
+        name: adminName,
+        email,
+        password,
+        companyName
+      });
     },
-    []
+    [register]
   );
 
-  const updateProfile = useCallback(async (companyName: string) => {
-    if (!user) return;
-    const updated = { ...user, companyName };
-    setUser(updated);
-    UserStorage.update(user.id, { companyName } as Partial<User>);
-    toast.success("Profile Updated", {
-      description: "Company name has been updated successfully"
-    });
-  }, [user]);
+  const updateProfile = useCallback(
+    async (companyName: string) => {
+      if (!user) return;
+
+      setUser({ ...user, companyName });
+      toast.success("Profile Updated", {
+        description: "Company name has been updated successfully"
+      });
+    },
+    [user]
+  );
 
   const value = useMemo<AuthContextType>(
     () => ({
@@ -297,10 +290,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       registerNewAdmin,
       updateProfile,
       isAuthenticated: !!user,
+      isBootstrapping: bootstrapAuth.isLoading,
       sessionHours,
       checkSession
     }),
-    [checkSession, forgotPassword, getCurrentUser, login, logout, register, registerNewAdmin, sessionHours, updateProfile, user]
+    [bootstrapAuth.isLoading, checkSession, forgotPassword, getCurrentUser, login, logout, register, registerNewAdmin, sessionHours, updateProfile, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

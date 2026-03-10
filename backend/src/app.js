@@ -3,7 +3,6 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const { sendEmail } = require("./services/emailService");
 const apiRoutes = require("./routes");
-const authRoutes = require("./auth/auth.routes");
 const { securityMiddleware, globalRateLimiter } = require("./config/security");
 const { notFound, errorHandler } = require("./middleware/error.middleware");
 
@@ -36,10 +35,7 @@ app.get("/test-email", async (req, res) => {
   }
 });
 
-// Backward-compatible auth routes without version prefix.
-app.use("/auth", authRoutes);
 app.use("/api", apiRoutes);
-app.use("/api/v1", apiRoutes);
 app.use(notFound);
 app.use(errorHandler);
 

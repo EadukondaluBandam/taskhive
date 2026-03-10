@@ -5,7 +5,7 @@ const { requireRole } = require("../middleware/rbac.middleware");
 const { asyncHandler } = require("../middleware/asyncHandler");
 const { ROLES } = require("../utils/roles");
 const { validate } = require("../middleware/validate.middleware");
-const { idParamSchema } = require("./superadmin.schema");
+const { idParamSchema, createAdminSchema, createEmployeeSchema } = require("./superadmin.schema");
 
 const router = express.Router();
 
@@ -14,8 +14,11 @@ router.use(requireRole(ROLES.SUPER_ADMIN));
 
 router.get("/dashboard", asyncHandler(controller.getDashboard));
 router.get("/admins", asyncHandler(controller.listAdmins));
+router.post("/admins", validate(createAdminSchema), asyncHandler(controller.createAdmin));
+router.delete("/admins/:id", validate(idParamSchema), asyncHandler(controller.deleteAdmin));
+
 router.get("/employees", asyncHandler(controller.listEmployees));
-router.delete("/admin/:id", validate(idParamSchema), asyncHandler(controller.deleteAdmin));
-router.delete("/employee/:id", validate(idParamSchema), asyncHandler(controller.deleteEmployee));
+router.post("/employees", validate(createEmployeeSchema), asyncHandler(controller.createEmployee));
+router.delete("/employees/:id", validate(idParamSchema), asyncHandler(controller.deleteEmployee));
 
 module.exports = router;

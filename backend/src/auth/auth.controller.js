@@ -1,70 +1,23 @@
 const { StatusCodes } = require("http-status-codes");
 const authService = require("./auth.service");
-const { env } = require("../config/env");
-const logger = require("../utils/logger");
-
-const REFRESH_COOKIE = "taskhive_refresh_token";
-
-const refreshCookieOptions = {
-  httpOnly: true,
-  secure: env.NODE_ENV === "production",
-  sameSite: "strict",
-  path: "/api/v1/auth",
-  maxAge: 7 * 24 * 60 * 60 * 1000
-};
-
-const setRefreshCookie = (res, token) => {
-  res.cookie(REFRESH_COOKIE, token, refreshCookieOptions);
-};
-
-const clearRefreshCookie = (res) => {
-  res.clearCookie(REFRESH_COOKIE, {
-    ...refreshCookieOptions,
-    maxAge: undefined
-  });
-};
 
 const register = async (req, res) => {
-  const result = await authService.register(req.validated.body, req.user || null);
-  setRefreshCookie(res, result.refreshToken);
+  const result = await authService.register(req.validated.body);
 
   res.status(StatusCodes.CREATED).json({
     success: true,
-    message: "User registered successfully",
-    data: {
-      user: result.user,
-      accessToken: result.accessToken
-    }
-  });
-};
-
-const registerCompany = async (req, res) => {
-  const result = await authService.registerCompany(req.validated.body);
-  setRefreshCookie(res, result.refreshToken);
-
-  res.status(StatusCodes.CREATED).json({
-    success: true,
-    message: "Company admin registered successfully",
-    data: {
-      user: result.user,
-      organization: result.organization,
-      defaults: result.defaults,
-      accessToken: result.accessToken
-    }
+    message: "Company registered successfully",
+    data: result
   });
 };
 
 const login = async (req, res) => {
   const result = await authService.login(req.validated.body);
-  setRefreshCookie(res, result.refreshToken);
 
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Login successful",
-    data: {
-      user: result.user,
-      accessToken: result.accessToken
-    }
+    data: result
   });
 };
 
@@ -96,26 +49,16 @@ const setPassword = async (req, res) => {
 };
 
 const refresh = async (req, res) => {
-  const refreshToken = req.validated.body.refreshToken || req.cookies[REFRESH_COOKIE];
-  const result = await authService.refresh({ refreshToken });
-  setRefreshCookie(res, result.refreshToken);
+  const result = await authService.refresh(req.validated.body);
 
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Access token refreshed successfully",
-    data: {
-      user: result.user,
-      accessToken: result.accessToken
-    }
+    data: result
   });
 };
 
-const logout = async (req, res) => {
-  const refreshToken = req.validated.body.refreshToken || req.cookies[REFRESH_COOKIE];
-  await authService.logout({ refreshToken });
-  clearRefreshCookie(res);
-  logger.info("User logged out", { ip: req.ip });
-
+const logout = async (_req, res) => {
   res.status(StatusCodes.OK).json({
     success: true,
     message: "Logout successful",
@@ -125,7 +68,6 @@ const logout = async (req, res) => {
 
 module.exports = {
   register,
-  registerCompany,
   login,
   forgotPassword,
   resetPassword,

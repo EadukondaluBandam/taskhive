@@ -8,108 +8,112 @@ const logger = require("../utils/logger");
 const { generateSecureToken, hashToken, addMinutes } = require("../utils/tokens");
 const { sendEmail } = require("../services/emailService");
 
+const slugify = (value) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 180);
+
+const buildUniqueOrganizationSlug = async (companyName) => {
+  const baseSlug = slugify(companyName) || "company";
+  let slug = baseSlug;
+  let suffix = 1;
+
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await prisma.organization.findUnique({ where: { slug } });
+    if (!existing) return slug;
+    suffix += 1;
+    slug = `${baseSlug}-${suffix}`;
+  }
+};
+
 const sanitizeUser = (user) => ({
   id: user.id,
-  email: user.email,
   name: user.name,
+  email: user.email,
   role: user.role,
-  organizationId: user.organizationId,
-  adminId: user.adminId || null
+  companyId: user.organizationId,
+  companyName: user.organization?.name || null,
+  createdBy: user.adminId || null,
+  status: user.status,
+  createdAt: user.createdAt
 });
 
 const buildTokens = (user) => {
   const payload = {
-    sub: user.id,
+    id: user.id,
     role: user.role,
-    organizationId: user.organizationId || null
+    companyId: user.organizationId || null
   };
+
   return {
     accessToken: signAccessToken(payload),
     refreshToken: signRefreshToken(payload)
   };
 };
 
-const register = async ({ name, email, password, role, organizationId }, actor) => {
-  const existing = await prisma.user.findUnique({ where: { email } });
-  if (existing) {
-    logger.warn("Registration failed: email already registered", { email });
-    throw new ApiError(StatusCodes.CONFLICT, "Email already registered");
-  }
-
-  if (role !== ROLES.EMPLOYEE) {
-    if (!actor) {
-      logger.warn("Registration failed: privileged role without actor", { email, role });
-      throw new ApiError(StatusCodes.FORBIDDEN, "Only authenticated admins can assign privileged roles");
-    }
-    if (![ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(actor.role)) {
-      logger.warn("Registration failed: insufficient role assignment permissions", {
-        email,
-        requestedRole: role,
-        actorRole: actor.role
-      });
-      throw new ApiError(StatusCodes.FORBIDDEN, "Insufficient role assignment permissions");
-    }
-    if (role === ROLES.SUPER_ADMIN && actor.role !== ROLES.SUPER_ADMIN) {
-      logger.warn("Registration failed: non-super-admin attempted super_admin creation", {
-        email,
-        actorRole: actor.role
-      });
-      throw new ApiError(StatusCodes.FORBIDDEN, "Only super_admin can create super_admin");
-    }
-  }
-
-  const passwordHash = await bcrypt.hash(password, 12);
-
-  const user = await prisma.user.create({
-    data: {
-      name,
-      email,
-      passwordHash,
-      role: role || ROLES.EMPLOYEE,
-      status: "active",
-      organizationId: organizationId || null,
-      adminId: actor?.role === ROLES.ADMIN ? actor.sub : null
+const getUserForAuth = async (email) =>
+  prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    include: {
+      organization: {
+        select: {
+          id: true,
+          name: true
+        }
+      }
     }
   });
 
-  logger.info("Registration successful", { userId: user.id, email: user.email, role: user.role });
+const register = async ({ name, adminName, email, password, companyName }) => {
+  const normalizedEmail = email.trim().toLowerCase();
+  const displayName = (name || adminName || "").trim();
 
-  return {
-    user: sanitizeUser(user),
-    ...buildTokens(user)
-  };
-};
+  if (!displayName) {
+    throw new ApiError(StatusCodes.BAD_REQUEST, "Company owner name is required");
+  }
 
-const registerCompany = async ({ companyName, adminName, email, password }) => {
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+  const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
   if (existingUser) {
-    logger.warn("Company registration failed: email already registered", { email });
     throw new ApiError(StatusCodes.CONFLICT, "Email already registered");
   }
 
-  const existingOrganization = await prisma.organization.findUnique({ where: { name: companyName } });
+  const existingOrganization = await prisma.organization.findUnique({ where: { name: companyName.trim() } });
   if (existingOrganization) {
-    logger.warn("Company registration failed: organization already exists", { companyName });
     throw new ApiError(StatusCodes.CONFLICT, "Company name already in use");
   }
 
   const passwordHash = await bcrypt.hash(password, 12);
+  const organizationSlug = await buildUniqueOrganizationSlug(companyName);
 
   const created = await prisma.$transaction(async (tx) => {
     const organization = await tx.organization.create({
-      data: { name: companyName }
+      data: {
+        name: companyName.trim(),
+        slug: organizationSlug
+      }
     });
 
     const adminUser = await tx.user.create({
       data: {
-        name: adminName,
-        email,
+        name: displayName,
+        email: normalizedEmail,
         passwordHash,
         role: ROLES.ADMIN,
         status: "active",
-        inviteToken: null,
-        inviteTokenExpiry: null,
         organizationId: organization.id
+      },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
       }
     });
 
@@ -118,48 +122,42 @@ const registerCompany = async ({ companyName, adminName, email, password }) => {
 
   logger.info("Company registration successful", {
     organizationId: created.organization.id,
-    adminUserId: created.adminUser.id,
-    email
+    adminId: created.adminUser.id,
+    email: normalizedEmail
   });
 
   return {
     user: sanitizeUser(created.adminUser),
-    organization: {
-      id: created.organization.id,
-      name: created.organization.name
-    },
-    defaults: {
-      employees: 0,
-      projects: 0,
-      tasks: 0
-    },
     ...buildTokens(created.adminUser)
   };
 };
 
 const login = async ({ email, password }) => {
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) {
-    logger.warn("Login failed: user not found", { email });
+  const user = await getUserForAuth(email);
+
+  if (!user || !user.passwordHash) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
   }
 
-  if (user.status === "pending") {
-    logger.warn("Login failed: pending account", { email, userId: user.id });
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Please check your email to set password");
+  if (user.status === "archived" || user.status === "suspended") {
+    throw new ApiError(StatusCodes.FORBIDDEN, "This account is not active");
   }
-  if (!user.passwordHash) {
-    logger.warn("Login failed: account has no password hash", { email, userId: user.id });
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
+
+  if (user.status === "pending" || user.status === "invited") {
+    throw new ApiError(StatusCodes.UNAUTHORIZED, "Please complete your account setup first");
   }
 
   const matched = await bcrypt.compare(password, user.passwordHash);
   if (!matched) {
-    logger.warn("Login failed: invalid password", { email });
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid email or password");
   }
 
-  logger.info("Login successful", { userId: user.id, email: user.email, role: user.role });
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { lastLoginAt: new Date() }
+  });
+
+  logger.info("Login successful", { userId: user.id, role: user.role });
 
   return {
     user: sanitizeUser(user),
@@ -168,26 +166,29 @@ const login = async ({ email, password }) => {
 };
 
 const refresh = async ({ refreshToken }) => {
-  if (!refreshToken) {
-    logger.warn("Refresh failed: missing refresh token");
-    throw new ApiError(StatusCodes.UNAUTHORIZED, "Refresh token is required");
-  }
-
   let payload;
+
   try {
     payload = verifyRefreshToken(refreshToken);
-  } catch (_err) {
-    logger.warn("Refresh failed: invalid or expired token");
+  } catch (_error) {
     throw new ApiError(StatusCodes.UNAUTHORIZED, "Invalid or expired refresh token");
   }
 
-  const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+  const user = await prisma.user.findUnique({
+    where: { id: payload.id || payload.sub },
+    include: {
+      organization: {
+        select: {
+          id: true,
+          name: true
+        }
+      }
+    }
+  });
+
   if (!user) {
-    logger.warn("Refresh failed: user not found", { userId: payload.sub });
     throw new ApiError(StatusCodes.UNAUTHORIZED, "User not found");
   }
-
-  logger.info("Refresh successful", { userId: user.id, email: user.email });
 
   return {
     user: sanitizeUser(user),
@@ -195,24 +196,9 @@ const refresh = async ({ refreshToken }) => {
   };
 };
 
-const logout = async ({ refreshToken }) => {
-  if (!refreshToken) {
-    logger.info("Logout successful (no token provided)");
-    return;
-  }
-
-  try {
-    const payload = verifyRefreshToken(refreshToken);
-    logger.info("Logout successful", { userId: payload.sub });
-  } catch (_err) {
-    logger.warn("Logout called with invalid refresh token");
-  }
-};
-
 const forgotPassword = async ({ email }) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
   if (!user) {
-    logger.info("Forgot password requested for unknown email", { email });
     return { delivered: true };
   }
 
@@ -254,7 +240,6 @@ const forgotPassword = async ({ email }) => {
     `
   );
 
-  logger.info("Password reset email sent", { userId: user.id, email: user.email });
   return { delivered: true };
 };
 
@@ -267,9 +252,6 @@ const resetPassword = async ({ token, password }) => {
       tokenHash,
       usedAt: null,
       expiresAt: { gt: now }
-    },
-    include: {
-      user: true
     }
   });
 
@@ -282,7 +264,10 @@ const resetPassword = async ({ token, password }) => {
   await prisma.$transaction(async (tx) => {
     await tx.user.update({
       where: { id: resetRecord.userId },
-      data: { passwordHash }
+      data: {
+        passwordHash,
+        status: "active"
+      }
     });
 
     await tx.passwordReset.update({
@@ -291,7 +276,6 @@ const resetPassword = async ({ token, password }) => {
     });
   });
 
-  logger.info("Password reset successful", { userId: resetRecord.userId });
   return { success: true };
 };
 
@@ -300,7 +284,8 @@ const setPassword = async ({ token, password }) => {
 
   const user = await prisma.user.findFirst({
     where: {
-      inviteToken: token
+      inviteToken: token,
+      deletedAt: null
     }
   });
 
@@ -320,17 +305,14 @@ const setPassword = async ({ token, password }) => {
     }
   });
 
-  logger.info("Invite password set successfully", { userId: user.id, email: user.email });
   return { success: true };
 };
 
 module.exports = {
   register,
-  registerCompany,
   login,
   forgotPassword,
   resetPassword,
   setPassword,
-  refresh,
-  logout
+  refresh
 };

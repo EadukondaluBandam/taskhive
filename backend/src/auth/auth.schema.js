@@ -1,27 +1,12 @@
 const { z } = require("zod");
-const { ROLES } = require("../utils/roles");
 
 const registerSchema = z.object({
   body: z.object({
-    name: z.string().min(2).max(80),
+    name: z.string().min(2).max(80).optional(),
+    adminName: z.string().min(2).max(80).optional(),
     email: z.string().email(),
     password: z.string().min(8).max(128),
-    role: z
-      .enum([ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.EMPLOYEE])
-      .optional()
-      .default(ROLES.EMPLOYEE),
-    organizationId: z.string().uuid().optional()
-  }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional()
-});
-
-const registerCompanySchema = z.object({
-  body: z.object({
-    companyName: z.string().min(2).max(160),
-    adminName: z.string().min(2).max(80),
-    email: z.string().email(),
-    password: z.string().min(8).max(128)
+    companyName: z.string().min(2).max(160)
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional()
@@ -64,23 +49,20 @@ const setPasswordSchema = z.object({
 
 const refreshSchema = z.object({
   body: z.object({
-    refreshToken: z.string().min(1).optional()
+    refreshToken: z.string().min(1)
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional()
 });
 
 const logoutSchema = z.object({
-  body: z.object({
-    refreshToken: z.string().min(1).optional()
-  }),
+  body: z.object({}).optional(),
   params: z.object({}).optional(),
   query: z.object({}).optional()
 });
 
 module.exports = {
   registerSchema,
-  registerCompanySchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,

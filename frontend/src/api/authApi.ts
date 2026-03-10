@@ -5,12 +5,17 @@ export interface AuthUserResponse {
   name: string;
   email: string;
   role: "super_admin" | "admin" | "employee";
-  organizationId?: string | null;
+  companyId?: string | null;
+  companyName?: string | null;
+  createdBy?: string | null;
+  status?: string;
+  createdAt?: string;
 }
 
 export interface AuthPayload {
   user: AuthUserResponse;
   accessToken: string;
+  refreshToken?: string;
 }
 
 export interface LoginInput {
@@ -22,15 +27,7 @@ export interface RegisterInput {
   name: string;
   email: string;
   password: string;
-  role?: "super_admin" | "admin" | "employee";
-  organizationId?: string;
-}
-
-export interface RegisterCompanyInput {
   companyName: string;
-  adminName: string;
-  email: string;
-  password: string;
 }
 
 export interface SetPasswordInput {
@@ -54,13 +51,8 @@ export const authApi = {
     return applyAuthPayload(data.data);
   },
 
-  async registerCompany(input: RegisterCompanyInput) {
-    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register-company", input);
-    return applyAuthPayload(data.data);
-  },
-
-  async refresh() {
-    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/refresh", {});
+  async refresh(refreshToken: string) {
+    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/refresh", { refreshToken });
     return applyAuthPayload(data.data);
   },
 

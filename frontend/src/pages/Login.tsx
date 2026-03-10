@@ -149,8 +149,9 @@ export default function Login() {
     });
 
     if (result.success) {
-      setSuccess("New admin account created successfully! You can now login.");
+      setSuccess("Company account created successfully.");
       resetRegisterForm();
+      navigate("/admin");
     } else {
       setError(result.error || "Registration failed");
     }

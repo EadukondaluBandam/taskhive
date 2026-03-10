@@ -39,7 +39,11 @@ import EmployeeProfile from "./pages/employee/EmployeeProfile";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode; requiredRole?: 'super_admin' | 'admin' | 'employee' }) {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isBootstrapping } = useAuth();
+
+  if (isBootstrapping) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
@@ -62,7 +66,11 @@ function ProtectedRoute({ children, requiredRole }: { children: React.ReactNode;
 }
 
 function AppRoutes() {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isBootstrapping, user } = useAuth();
+
+  if (isBootstrapping) {
+    return <div className="min-h-screen bg-background" />;
+  }
 
   return (
     <Routes>

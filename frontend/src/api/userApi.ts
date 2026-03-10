@@ -6,17 +6,37 @@ export interface UserDto {
   email: string;
   role: "super_admin" | "admin" | "employee";
   status?: "pending" | "active" | "invited" | "suspended" | "archived";
-  organizationId?: string | null;
-  adminId?: string | null;
-  adminName?: string | null;
+  companyId?: string | null;
+  companyName?: string | null;
+  createdBy?: string | null;
+  createdByName?: string | null;
+  totalHours?: number;
+  productivity?: number;
   createdAt: string;
 }
 
-export interface CreateUserInput {
+export interface CreateAdminInput {
   name: string;
   email: string;
-  role: "admin" | "employee";
-  organizationId?: string;
+  companyName: string;
+  password?: string;
+}
+
+export interface CreateEmployeeInput {
+  name: string;
+  email: string;
+  password?: string;
+}
+
+export interface CreateEmployeeAsSuperAdminInput extends CreateEmployeeInput {
+  companyId: string;
+  createdBy?: string;
+}
+
+export interface UpdateEmployeeInput {
+  name?: string;
+  email?: string;
+  status?: "active" | "suspended" | "archived";
 }
 
 export const userApi = {
@@ -25,23 +45,18 @@ export const userApi = {
     return data.data;
   },
 
-  async listUsers() {
-    const { data } = await apiClient.get<ApiResponse<UserDto[]>>("/users");
-    return data.data;
-  },
-
-  async createUser(input: CreateUserInput) {
-    const { data } = await apiClient.post<ApiResponse<UserDto>>("/users", input);
-    return data.data;
-  },
-
-  async deleteUser(id: string) {
-    await apiClient.delete<ApiResponse<Record<string, never>>>(`/users/${id}`);
-  },
-
   async listAdmins() {
     const { data } = await apiClient.get<ApiResponse<UserDto[]>>("/superadmin/admins");
     return data.data;
+  },
+
+  async createAdmin(input: CreateAdminInput) {
+    const { data } = await apiClient.post<ApiResponse<UserDto>>("/superadmin/admins", input);
+    return data.data;
+  },
+
+  async deleteAdmin(id: string) {
+    await apiClient.delete<ApiResponse<Record<string, never>>>(`/superadmin/admins/${id}`);
   },
 
   async listEmployees() {
@@ -49,25 +64,31 @@ export const userApi = {
     return data.data;
   },
 
-  async listMyEmployees() {
+  async createEmployeeAsSuperAdmin(input: CreateEmployeeAsSuperAdminInput) {
+    const { data } = await apiClient.post<ApiResponse<UserDto>>("/superadmin/employees", input);
+    return data.data;
+  },
+
+  async deleteEmployeeAsSuperAdmin(id: string) {
+    await apiClient.delete<ApiResponse<Record<string, never>>>(`/superadmin/employees/${id}`);
+  },
+
+  async listCompanyEmployees() {
     const { data } = await apiClient.get<ApiResponse<UserDto[]>>("/admin/employees");
     return data.data;
   },
 
-  async createEmployee(input: { name: string; email: string }) {
-    const { data } = await apiClient.post<ApiResponse<UserDto>>("/admin/employee", input);
+  async createEmployee(input: CreateEmployeeInput) {
+    const { data } = await apiClient.post<ApiResponse<UserDto>>("/admin/employees", input);
+    return data.data;
+  },
+
+  async updateEmployee(id: string, input: UpdateEmployeeInput) {
+    const { data } = await apiClient.put<ApiResponse<UserDto>>(`/admin/employees/${id}`, input);
     return data.data;
   },
 
   async deleteEmployee(id: string) {
-    await apiClient.delete<ApiResponse<Record<string, never>>>(`/admin/employee/${id}`);
-  },
-
-  async deleteAdmin(id: string) {
-    await apiClient.delete<ApiResponse<Record<string, never>>>(`/superadmin/admin/${id}`);
-  },
-
-  async deleteEmployeeAsSuperAdmin(id: string) {
-    await apiClient.delete<ApiResponse<Record<string, never>>>(`/superadmin/employee/${id}`);
+    await apiClient.delete<ApiResponse<Record<string, never>>>(`/admin/employees/${id}`);
   }
 };

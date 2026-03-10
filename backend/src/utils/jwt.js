@@ -1,8 +1,8 @@
 const jwt = require("jsonwebtoken");
 const { env } = require("../config/env");
 
-const ACCESS_TTL = "15m";
-const REFRESH_TTL = "7d";
+const ACCESS_TTL = "7d";
+const REFRESH_TTL = "30d";
 
 const signAccessToken = (payload) =>
   jwt.sign(payload, env.JWT_SECRET, { expiresIn: ACCESS_TTL });
