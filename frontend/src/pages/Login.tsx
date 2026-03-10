@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, Loader2, Users, Building2, ArrowLeft } from "lucide-react";
+import SEO from "@/components/SEO";
 import { useAuth } from "@/contexts/AuthContext";
 import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
@@ -443,58 +444,79 @@ export default function Login() {
   );
 
   return (
-    <div className="min-h-screen flex">
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md space-y-8 animate-fade-in">
-          <div className="text-center">
-            <div className="flex justify-center mb-6">
-              <Logo size="lg" />
+    <>
+      <SEO
+        title={
+          view === "login"
+            ? "TaskHive Login"
+            : view === "forgot"
+              ? "TaskHive Forgot Password"
+              : "Register Your Company on TaskHive"
+        }
+        description={
+          view === "login"
+            ? "Sign in to TaskHive to access employee monitoring, productivity dashboards, and team management tools."
+            : view === "forgot"
+              ? "Reset your TaskHive password to regain access to your productivity dashboard."
+              : "Create a new TaskHive company account to manage employee productivity and task tracking."
+        }
+        path="/login"
+        robots="noindex, follow"
+      />
+
+      <div className="min-h-screen flex">
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div className="w-full max-w-md space-y-8 animate-fade-in">
+            <div className="text-center">
+              <div className="flex justify-center mb-6">
+                <Logo size="lg" />
+              </div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {view === "login" ? "Welcome to TaskHive" : view === "forgot" ? "Reset Password" : "Create New Company"}
+              </h1>
+              <p className="text-muted-foreground mt-2">
+                {view === "login"
+                  ? "Sign in to access your dashboard"
+                  : view === "forgot"
+                    ? "Enter your email to receive reset instructions"
+                    : "Create a new admin account for your company"}
+              </p>
             </div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {view === "login" ? "Welcome to TaskHive" : view === "forgot" ? "Reset Password" : "Create New Company"}
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              {view === "login"
-                ? "Sign in to access your dashboard"
-                : view === "forgot"
-                  ? "Enter your email to receive reset instructions"
-                  : "Create a new admin account for your company"}
+
+            <div className="space-y-6">
+              {view === "login" && renderLoginForm()}
+              {view === "forgot" && renderForgotPasswordForm()}
+              {view === "register" && renderRegisterForm()}
+            </div>
+          </div>
+        </div>
+
+        <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary/20 via-background to-cyan-500/10 items-center justify-center p-12 relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(var(--primary)/0.15),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(199_89%_48%/0.1),transparent_50%)]" />
+
+          <div className="relative z-10 text-center max-w-lg">
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2 text-sm text-primary">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                </span>
+                Enterprise Time Tracking
+              </div>
+            </div>
+
+            <h2 className="text-4xl font-bold text-foreground mb-4">
+              Track Time.
+              <span className="text-gradient"> Boost Productivity.</span>
+            </h2>
+
+            <p className="text-lg text-muted-foreground">
+              Comprehensive workforce analytics and time management for modern enterprises.
             </p>
           </div>
-
-          <div className="space-y-6">
-            {view === "login" && renderLoginForm()}
-            {view === "forgot" && renderForgotPasswordForm()}
-            {view === "register" && renderRegisterForm()}
-          </div>
         </div>
       </div>
-
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary/20 via-background to-cyan-500/10 items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,hsl(var(--primary)/0.15),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(199_89%_48%/0.1),transparent_50%)]" />
-
-        <div className="relative z-10 text-center max-w-lg">
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 rounded-full px-4 py-2 text-sm text-primary">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
-              </span>
-              Enterprise Time Tracking
-            </div>
-          </div>
-
-          <h2 className="text-4xl font-bold text-foreground mb-4">
-            Track Time.
-            <span className="text-gradient"> Boost Productivity.</span>
-          </h2>
-
-          <p className="text-lg text-muted-foreground">
-            Comprehensive workforce analytics and time management for modern enterprises.
-          </p>
-        </div>
-      </div>
-    </div>
+    </>
   );
 }

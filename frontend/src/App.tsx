@@ -2,32 +2,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 
-import Login from "./pages/Login";
-import SetPassword from "./pages/SetPassword";
-import NotFound from "./pages/NotFound";
 import AdminLayout from "./layouts/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminProjects from "./pages/admin/AdminProjects";
-import AdminTasks from "./pages/admin/AdminTasks";
-import AdminReports from "./pages/admin/AdminReports";
-import AdminScreenshots from "./pages/admin/AdminScreenshots";
-import AdminProductivity from "./pages/admin/AdminProductivity";
-import AdminActivity from "./pages/admin/AdminActivity";
-import AdminTrackedTime from "./pages/admin/AdminTrackedTime";
-import AdminOrganization from "./pages/admin/AdminOrganization";
 import EmployeeLayout from "./layouts/EmployeeLayout";
-import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
-import EmployeeTimer from "./pages/employee/EmployeeTimer";
-import EmployeeTimesheets from "./pages/employee/EmployeeTimesheets";
-import EmployeeActivities from "./pages/employee/EmployeeActivities";
-import EmployeeProductivity from "./pages/employee/EmployeeProductivity";
-import EmployeeProfile from "./pages/employee/EmployeeProfile";
-import AdminProfile from "./pages/admin/AdminProfile";
-import Download from "./pages/Download";
+import { adminRoutes, employeeRoutes, publicPages } from "./routes/routeMap";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +38,10 @@ function ProtectedRoute({
 
 function AppRoutes() {
   const { isAuthenticated, isBootstrapping, user } = useAuth();
+  const HomePage = publicPages.home;
+  const LoginPage = publicPages.login;
+  const SetPasswordPage = publicPages.setPassword;
+  const NotFoundPage = publicPages.notFound;
 
   if (isBootstrapping) {
     return <div className="min-h-screen bg-background" />;
@@ -66,13 +51,7 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/"
-        element={
-          isAuthenticated ? (
-            <Navigate to={user?.role === "employee" ? "/employee/dashboard" : "/admin/dashboard"} replace />
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
+        element={<HomePage />}
       />
       <Route
         path="/login"
@@ -80,12 +59,13 @@ function AppRoutes() {
           isAuthenticated ? (
             <Navigate to={user?.role === "employee" ? "/employee/dashboard" : "/admin/dashboard"} replace />
           ) : (
-            <Login />
+            <LoginPage />
           )
         }
       />
-      <Route path="/set-password" element={<SetPassword />} />
-      <Route path="/reset-password" element={<SetPassword />} />
+      <Route path="/home" element={<HomePage />} />
+      <Route path="/set-password" element={<SetPasswordPage />} />
+      <Route path="/reset-password" element={<SetPasswordPage />} />
 
       <Route
         path="/admin"
@@ -96,17 +76,11 @@ function AppRoutes() {
         }
       >
         <Route index element={<Navigate to="/admin/dashboard" replace />} />
-        <Route path="dashboard" element={<AdminDashboard />} />
-        <Route path="users" element={<AdminUsers />} />
-        <Route path="projects" element={<AdminProjects />} />
-        <Route path="tasks" element={<AdminTasks />} />
-        <Route path="reports" element={<AdminReports />} />
-        <Route path="screenshots" element={<AdminScreenshots />} />
-        <Route path="productivity" element={<AdminProductivity />} />
-        <Route path="activity" element={<AdminActivity />} />
-        <Route path="tracked-time" element={<AdminTrackedTime />} />
-        <Route path="organization" element={<AdminOrganization />} />
-        <Route path="profile" element={<AdminProfile />} />
+        {adminRoutes.map((route) => {
+          const Component = route.component;
+
+          return <Route key={route.fullPath} path={route.path} element={<Component />} />;
+        })}
       </Route>
 
       <Route
@@ -118,16 +92,14 @@ function AppRoutes() {
         }
       >
         <Route index element={<Navigate to="/employee/dashboard" replace />} />
-        <Route path="dashboard" element={<EmployeeDashboard />} />
-        <Route path="timer" element={<EmployeeTimer />} />
-        <Route path="timesheets" element={<EmployeeTimesheets />} />
-        <Route path="activities" element={<EmployeeActivities />} />
-        <Route path="productivity" element={<EmployeeProductivity />} />
-        <Route path="profile" element={<EmployeeProfile />} />
-        <Route path="download" element={<Download />} />
+        {employeeRoutes.map((route) => {
+          const Component = route.component;
+
+          return <Route key={route.fullPath} path={route.path} element={<Component />} />;
+        })}
       </Route>
 
-      <Route path="*" element={<NotFound />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
@@ -135,13 +107,15 @@ function AppRoutes() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </TooltipProvider>
+      <HelmetProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </TooltipProvider>
+      </HelmetProvider>
     </AuthProvider>
   </QueryClientProvider>
 );
