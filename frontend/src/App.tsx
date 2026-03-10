@@ -83,7 +83,7 @@ function AppRoutes() {
         path="/login"
         element={
           isAuthenticated ? (
-            <Navigate to={user?.role === 'admin' ? '/admin' : '/employee'} replace />
+            <Navigate to={user?.role === 'admin' || user?.role === 'super_admin' ? '/admin' : '/employee'} replace />
           ) : (
             <Login />
           )

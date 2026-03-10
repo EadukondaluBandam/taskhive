@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users,
@@ -7,9 +8,6 @@ import {
   Activity,
   AlertCircle,
 } from 'lucide-react';
-import { StatCard } from '@/components/StatCard';
-import { ProgressRing } from '@/components/ProgressRing';
-import { dashboardApi, type DashboardSummary } from '@/api/dashboardApi';
 import { useQuery } from '@tanstack/react-query';
 import {
   BarChart,
@@ -20,43 +18,61 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useMemo, useEffect, useState } from 'react';
+import { StatCard } from '@/components/StatCard';
+import { ProgressRing } from '@/components/ProgressRing';
+import { dashboardApi, type DashboardSummary } from '@/api/dashboardApi';
+import { ProjectStorage, TimerStorage, UserStorage } from '@/lib/storage';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const { data: summary, isLoading } = useQuery<DashboardSummary>(["dashboard", "summary"], dashboardApi.getSummary);
+  const { data: summary } = useQuery<DashboardSummary>({
+    queryKey: ['dashboard', 'summary'],
+    queryFn: dashboardApi.getSummary
+  });
 
-  const activeUsers = summary?.totalEmployees ?? 0;
-  const activeProjects = summary?.activeProjects ?? 0;
-  const pendingTasks = 0; // Pending tasks not available in API
+  const users = useMemo(() => UserStorage.getAll(), []);
+  const projects = useMemo(() => ProjectStorage.getAll(), []);
+  const activeTimers = useMemo(() => TimerStorage.getAllActive(), []);
+
+  const activeUsers = summary?.totalEmployees ?? users.filter((user) => user.status === 'active').length;
+  const activeProjects = summary?.activeProjects ?? projects.filter((project) => project.status === 'active').length;
+  const pendingTasks = 0;
   const avgProductivity = summary?.productivityScore ?? 0;
   const totalHours = summary?.totalHours ?? 0;
 
-  const weeklyData = useMemo(() => {
-    // Fallback placeholder data if summary isn’t available
-    return [
-      { day: 'Mon', hours: 0 },
-      { day: 'Tue', hours: 0 },
-      { day: 'Wed', hours: 0 },
-      { day: 'Thu', hours: 0 },
-      { day: 'Fri', hours: 0 },
-      { day: 'Sat', hours: 0 },
-      { day: 'Sun', hours: 0 }
-    ];
-  }, []);
+  const weeklyData = useMemo(
+    () => [
+      { day: 'Mon', productive: 0, idle: 0 },
+      { day: 'Tue', productive: 0, idle: 0 },
+      { day: 'Wed', productive: 0, idle: 0 },
+      { day: 'Thu', productive: 0, idle: 0 },
+      { day: 'Fri', productive: 0, idle: 0 },
+      { day: 'Sat', productive: 0, idle: 0 },
+      { day: 'Sun', productive: 0, idle: 0 }
+    ],
+    []
+  );
 
   const productivityByTeam = useMemo(() => {
+    const baseline = Math.max(0, Math.min(avgProductivity, 100));
+
     return [
-      { team: 'Team A', productivity: avgProductivity },
-      { team: 'Team B', productivity: avgProductivity - 10 },
-      { team: 'Team C', productivity: avgProductivity + 5 }
+      { team: 'Team A', productivity: baseline },
+      { team: 'Team B', productivity: Math.max(0, baseline - 10) },
+      { team: 'Team C', productivity: Math.min(100, baseline + 5) }
     ];
   }, [avgProductivity]);
 
+  const rankedUsers = useMemo(
+    () => [...users].sort((a, b) => b.productivity - a.productivity).slice(0, 5),
+    [users]
+  );
+
+  const topProjects = useMemo(() => projects.slice(0, 4), [projects]);
+
   return (
     <div className="space-y-6">
-      {/* Stats Grid - Clickable */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <div onClick={() => navigate('/admin/users')} className="cursor-pointer">
           <StatCard
             title="Active Employees"
@@ -71,7 +87,7 @@ export default function AdminDashboard() {
           <StatCard
             title="Active Projects"
             value={activeProjects}
-            subtitle={`${projects.length - activeProjects} completed/on-hold`}
+            subtitle={`${Math.max(projects.length - activeProjects, 0)} completed/on-hold`}
             icon={FolderKanban}
             variant="success"
           />
@@ -95,25 +111,25 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Active Employees Status */}
       {activeTimers.length > 0 && (
-        <div className="bg-card rounded-xl border border-border p-4">
-          <h3 className="text-sm font-medium text-muted-foreground mb-3">Currently Working</h3>
+        <div className="rounded-xl border border-border bg-card p-4">
+          <h3 className="mb-3 text-sm font-medium text-muted-foreground">Currently Working</h3>
           <div className="flex flex-wrap gap-2">
             {activeTimers.map((timer) => {
               const user = UserStorage.getById(timer.userId);
-              const project = ProjectStorage.getById(timer.projectId);
+              const project = timer.projectId ? ProjectStorage.getById(timer.projectId) : undefined;
+
               return (
                 <div
                   key={timer.userId}
-                  className="flex items-center gap-2 px-3 py-2 bg-success/10 border border-success/20 rounded-lg"
+                  className="flex items-center gap-2 rounded-lg border border-success/20 bg-success/10 px-3 py-2"
                 >
                   <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
                   </span>
-                  <span className="text-sm font-medium text-foreground">{user?.name}</span>
-                  <span className="text-xs text-muted-foreground">• {project?.name}</span>
+                  <span className="text-sm font-medium text-foreground">{user?.name || 'Unknown user'}</span>
+                  <span className="text-xs text-muted-foreground">- {project?.name || 'Manual timer'}</span>
                 </div>
               );
             })}
@@ -121,11 +137,9 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Weekly Hours Chart */}
-        <div className="lg:col-span-2 bg-card rounded-xl border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Weekly Hours Overview</h3>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="rounded-xl border border-border bg-card p-6 lg:col-span-2">
+          <h3 className="mb-4 text-lg font-semibold text-foreground">Weekly Hours Overview</h3>
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={weeklyData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
@@ -145,23 +159,22 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Productivity Overview */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">Avg Productivity</h3>
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h3 className="mb-4 text-lg font-semibold text-foreground">Avg Productivity</h3>
           <div className="flex flex-col items-center">
             <ProgressRing value={avgProductivity} size={160} strokeWidth={12} label="Team Average" />
             <div className="mt-6 w-full space-y-3">
-              {productivityByTeam.slice(0, 4).map((team) => (
+              {productivityByTeam.map((team) => (
                 <div key={team.team} className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">{team.team}</span>
                   <div className="flex items-center gap-2">
-                    <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
                       <div
-                        className="h-full bg-primary rounded-full transition-all duration-500"
+                        className="h-full rounded-full bg-primary transition-all duration-500"
                         style={{ width: `${team.productivity}%` }}
                       />
                     </div>
-                    <span className="text-sm font-medium text-foreground w-10 text-right">{team.productivity}%</span>
+                    <span className="w-10 text-right text-sm font-medium text-foreground">{team.productivity}%</span>
                   </div>
                 </div>
               ))}
@@ -170,28 +183,26 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Bottom Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent Users */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center justify-between mb-4">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-foreground">Top Performers</h3>
             <Activity size={20} className="text-muted-foreground" />
           </div>
           <div className="space-y-3">
-            {users
-              .sort((a, b) => b.productivity - a.productivity)
-              .slice(0, 5)
-              .map((user, index) => (
+            {rankedUsers.length === 0 ? (
+              <div className="rounded-lg bg-muted/30 p-4 text-sm text-muted-foreground">No employee data available yet.</div>
+            ) : (
+              rankedUsers.map((user, index) => (
                 <div
                   key={user.id}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                  className="flex items-center gap-3 rounded-lg bg-muted/30 p-3 transition-colors hover:bg-muted/50"
                 >
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary font-semibold text-sm">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-sm font-semibold text-primary">
                     {index + 1}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{user.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{user.name}</p>
                     <p className="text-xs text-muted-foreground">{user.department}</p>
                   </div>
                   <div className="text-right">
@@ -199,47 +210,51 @@ export default function AdminDashboard() {
                     <p className="text-xs text-muted-foreground">{user.totalHours}h</p>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* Project Status */}
-        <div className="bg-card rounded-xl border border-border p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className="rounded-xl border border-border bg-card p-6">
+          <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-foreground">Project Status</h3>
             <FolderKanban size={20} className="text-muted-foreground" />
           </div>
           <div className="space-y-4">
-            {projects.slice(0, 4).map((project) => (
-              <div key={project.id} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{project.name}</p>
-                    <p className="text-xs text-muted-foreground">{project.team.length} team members</p>
+            {topProjects.length === 0 ? (
+              <div className="rounded-lg bg-muted/30 p-4 text-sm text-muted-foreground">No projects available yet.</div>
+            ) : (
+              topProjects.map((project) => (
+                <div key={project.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">{project.name}</p>
+                      <p className="text-xs text-muted-foreground">{project.team.length} team members</p>
+                    </div>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${
+                        project.status === 'active'
+                          ? 'bg-success/10 text-success'
+                          : project.status === 'completed'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-warning/10 text-warning'
+                      }`}
+                    >
+                      {project.status}
+                    </span>
                   </div>
-                  <span
-                    className={`px-2 py-1 text-xs font-medium rounded-full ${
-                      project.status === 'active'
-                        ? 'bg-success/10 text-success'
-                        : project.status === 'completed'
-                        ? 'bg-primary/10 text-primary'
-                        : 'bg-warning/10 text-warning'
-                    }`}
-                  >
-                    {project.status}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-primary rounded-full transition-all duration-500"
-                      style={{ width: `${project.progress}%` }}
-                    />
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-500"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                    <span className="w-10 text-right text-xs font-medium text-foreground">{project.progress}%</span>
                   </div>
-                  <span className="text-xs font-medium text-foreground w-10 text-right">{project.progress}%</span>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
