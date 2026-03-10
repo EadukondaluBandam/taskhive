@@ -1,5 +1,5 @@
 const ROLES = {
-  SUPER_ADMIN: "super_admin",
+  SUPERADMIN: "superadmin",
   ADMIN: "admin",
   EMPLOYEE: "employee"
 };

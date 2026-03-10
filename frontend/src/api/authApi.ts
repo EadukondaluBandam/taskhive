@@ -4,18 +4,14 @@ export interface AuthUserResponse {
   id: string;
   name: string;
   email: string;
-  role: "super_admin" | "admin" | "employee";
+  role: "superadmin" | "admin" | "employee";
   companyId?: string | null;
   companyName?: string | null;
-  createdBy?: string | null;
-  status?: string;
-  createdAt?: string;
 }
 
 export interface AuthPayload {
+  token: string;
   user: AuthUserResponse;
-  accessToken: string;
-  refreshToken?: string;
 }
 
 export interface LoginInput {
@@ -23,15 +19,10 @@ export interface LoginInput {
   password: string;
 }
 
-export interface RegisterInput {
+export interface RegisterCompanyInput {
+  companyName: string;
   name: string;
   email: string;
-  password: string;
-  companyName: string;
-}
-
-export interface SetPasswordInput {
-  token: string;
   password: string;
 }
 
@@ -40,8 +31,13 @@ export interface ResetPasswordInput {
   newPassword: string;
 }
 
+export interface SetPasswordInput {
+  token: string;
+  password: string;
+}
+
 const applyAuthPayload = (payload: AuthPayload) => {
-  setAccessToken(payload.accessToken);
+  setAccessToken(payload.token);
   return payload;
 };
 
@@ -51,14 +47,14 @@ export const authApi = {
     return applyAuthPayload(data.data);
   },
 
-  async register(input: RegisterInput) {
-    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register", input);
+  async registerCompany(input: RegisterCompanyInput) {
+    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register-company", input);
     return applyAuthPayload(data.data);
   },
 
-  async registerCompany(input: RegisterInput) {
-    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/register-company", input);
-    return applyAuthPayload(data.data);
+  async logout() {
+    await apiClient.post<ApiResponse<Record<string, never>>>("/auth/logout", {});
+    setAccessToken(null);
   },
 
   async forgotPassword(email: string) {
@@ -69,18 +65,11 @@ export const authApi = {
     await apiClient.post<ApiResponse<Record<string, never>>>("/auth/reset-password", input);
   },
 
-  async refresh(refreshToken: string) {
-    const { data } = await apiClient.post<ApiResponse<AuthPayload>>("/auth/refresh", { refreshToken });
-    return applyAuthPayload(data.data);
-  },
-
-  async logout() {
-    await apiClient.post<ApiResponse<Record<string, never>>>("/auth/logout", {});
-    setAccessToken(null);
-  },
-
   async setPassword(input: SetPasswordInput) {
-    await apiClient.post<ApiResponse<Record<string, never>>>("/auth/set-password", input);
+    await apiClient.post<ApiResponse<Record<string, never>>>("/auth/reset-password", {
+      token: input.token,
+      newPassword: input.password
+    });
   },
 
   async getCurrentUser() {

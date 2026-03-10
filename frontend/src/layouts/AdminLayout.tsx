@@ -3,14 +3,6 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
-  FolderKanban,
-  ListTodo,
-  BarChart3,
-  Activity,
-  Building2,
-  Clock,
-  TrendingUp,
-  Camera,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -27,14 +19,6 @@ interface AdminLayoutProps {
 const navItems = [
   { path: '/admin', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { path: '/admin/users', icon: Users, label: 'Users' },
-  { path: '/admin/projects', icon: FolderKanban, label: 'Projects' },
-  { path: '/admin/tasks', icon: ListTodo, label: 'Tasks' },
-  { path: '/admin/reports', icon: BarChart3, label: 'Reports' },
-  { path: '/admin/activity', icon: Activity, label: 'Activity Insights' },
-  { path: '/admin/organization', icon: Building2, label: 'Organization Summary' },
-  { path: '/admin/tracked-time', icon: Clock, label: 'Total Tracked Time' },
-  { path: '/admin/productivity', icon: TrendingUp, label: 'Productivity Overview' },
-  { path: '/admin/screenshots', icon: Camera, label: 'Monitoring Snapshot' },
 ];
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
@@ -43,9 +27,9 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
   const location = useLocation();
 
-  const handleLogout = () => {
-    logout();
-    window.location.href = '/login';
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login', { replace: true });
   };
 
   return (

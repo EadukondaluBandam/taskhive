@@ -1,44 +1,45 @@
-require("dotenv").config();
+require("dotenv/config");
 const bcrypt = require("bcryptjs");
 const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
 
-const run = async () => {
-  const email = process.env.SUPER_ADMIN_EMAIL;
-  const password = process.env.SUPER_ADMIN_PASSWORD;
+async function seedSuperadmin() {
+  const email = process.env.SUPER_ADMIN_EMAIL?.toLowerCase();
+  const rawPassword = process.env.SUPER_ADMIN_PASSWORD;
 
-  if (!email || !password) {
-    throw new Error("SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD are required for seeding");
+  if (!email || !rawPassword) {
+    throw new Error("SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD must be set");
   }
 
-  const exists = await prisma.user.findUnique({ where: { email } });
-  if (exists) {
-    console.log("Super admin already exists");
+  const existing = await prisma.user.findUnique({
+    where: { email }
+  });
+
+  if (existing) {
+    console.log(`Superadmin already exists: ${email}`);
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 12);
+  const password = await bcrypt.hash(rawPassword, 12);
+
   await prisma.user.create({
     data: {
       name: "Super Admin",
       email,
-      passwordHash,
-      role: "super_admin",
-      status: "active"
+      password,
+      role: "superadmin"
     }
   });
 
-  console.log("Super admin created");
-};
+  console.log(`Superadmin created: ${email}`);
+}
 
-run()
+seedSuperadmin()
   .catch((error) => {
-    console.error(error);
+    console.error("Seed failed:", error);
     process.exit(1);
   })
   .finally(async () => {
     await prisma.$disconnect();
   });
-
-

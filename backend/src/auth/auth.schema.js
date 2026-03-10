@@ -1,12 +1,11 @@
 const { z } = require("zod");
 
-const registerSchema = z.object({
+const registerCompanySchema = z.object({
   body: z.object({
-    name: z.string().min(2).max(80).optional(),
-    adminName: z.string().min(2).max(80).optional(),
+    companyName: z.string().min(2).max(160),
+    name: z.string().min(2).max(120),
     email: z.string().email(),
-    password: z.string().min(8).max(128),
-    companyName: z.string().min(2).max(160)
+    password: z.string().min(8).max(128)
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional()
@@ -32,24 +31,7 @@ const forgotPasswordSchema = z.object({
 const resetPasswordSchema = z.object({
   body: z.object({
     token: z.string().min(20),
-    password: z.string().min(8).max(128)
-  }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional()
-});
-
-const setPasswordSchema = z.object({
-  body: z.object({
-    token: z.string().min(20),
-    password: z.string().min(8).max(128)
-  }),
-  params: z.object({}).optional(),
-  query: z.object({}).optional()
-});
-
-const refreshSchema = z.object({
-  body: z.object({
-    refreshToken: z.string().min(1)
+    newPassword: z.string().min(8).max(128)
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional()
@@ -62,11 +44,9 @@ const logoutSchema = z.object({
 });
 
 module.exports = {
-  registerSchema,
+  registerCompanySchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
-  setPasswordSchema,
-  refreshSchema,
   logoutSchema
 };

@@ -4,20 +4,22 @@ const { env } = require("../config/env");
 const { ROLES } = require("../utils/roles");
 
 const ensureSuperAdmin = async () => {
+  const email = env.SUPER_ADMIN_EMAIL.trim().toLowerCase();
+
   const existing = await prisma.user.findUnique({
-    where: { email: env.SUPER_ADMIN_EMAIL }
+    where: { email }
   });
 
   if (existing) return existing;
 
-  const passwordHash = await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12);
+  const password = await bcrypt.hash(env.SUPER_ADMIN_PASSWORD, 12);
+
   return prisma.user.create({
     data: {
       name: "Super Admin",
-      email: env.SUPER_ADMIN_EMAIL,
-      passwordHash,
-      role: ROLES.SUPER_ADMIN,
-      status: "active"
+      email,
+      password,
+      role: ROLES.SUPERADMIN
     }
   });
 };
@@ -25,5 +27,3 @@ const ensureSuperAdmin = async () => {
 module.exports = {
   ensureSuperAdmin
 };
-
-

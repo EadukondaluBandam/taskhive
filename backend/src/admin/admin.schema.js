@@ -4,7 +4,7 @@ const createEmployeeSchema = z.object({
   body: z.object({
     name: z.string().min(2).max(120),
     email: z.string().email(),
-    password: z.string().min(8).max(128).optional()
+    password: z.string().min(8).max(128)
   }),
   params: z.object({}).optional(),
   query: z.object({}).optional()
@@ -14,7 +14,7 @@ const updateEmployeeSchema = z.object({
   body: z.object({
     name: z.string().min(2).max(120).optional(),
     email: z.string().email().optional(),
-    status: z.enum(["active", "suspended", "archived"]).optional()
+    password: z.string().min(8).max(128).optional()
   }),
   params: z.object({
     id: z.string().uuid()
@@ -22,7 +22,7 @@ const updateEmployeeSchema = z.object({
   query: z.object({}).optional()
 });
 
-const idParamSchema = z.object({
+const employeeIdSchema = z.object({
   params: z.object({
     id: z.string().uuid()
   }),
@@ -33,5 +33,5 @@ const idParamSchema = z.object({
 module.exports = {
   createEmployeeSchema,
   updateEmployeeSchema,
-  idParamSchema
+  employeeIdSchema
 };

@@ -18,7 +18,7 @@ const updateEmployee = async (req, res) => {
 
 const deleteEmployee = async (req, res) => {
   await service.deleteEmployee(req.validated.params.id, req.user);
-  res.status(StatusCodes.OK).json({ success: true, message: "Employee deleted successfully", data: {} });
+  res.status(StatusCodes.OK).json({ success: true, data: {} });
 };
 
 module.exports = {
